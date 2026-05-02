@@ -13,6 +13,23 @@ The default path uses deterministic mock mode, so the project runs locally witho
 - Estimated cost per run
 - Failure reason
 
+## How Evaluation Works
+
+Each test case is a small "golden" example in `data/seed_cases.json`. The document text is the source of truth, and the expected fields are written from that document:
+
+- `expected_answer`: the concise answer the agent should give
+- `expected_facts`: the specific document facts that must be present or clearly represented in the answer
+- `expected_action`: the tool/action the agent should choose for the workflow
+
+At runtime, the harness chunks the document, retrieves the most relevant chunks for the question using token overlap, and passes those chunks to the agent. The evaluator then compares the agent output against the golden case:
+
+- `answer_match` checks overlap with the expected answer and required facts.
+- `tool_correct` checks whether the selected action exactly matches `expected_action`.
+- `hallucination_score` looks for unsupported money amounts or important terms in the answer that do not appear in the source document.
+- `failure_type` summarizes the main issue, such as `missed_key_fact`, `wrong_action`, `hallucination`, or `agent_error`.
+
+The retrieved context is shown in the run detail so a reviewer can see whether a failure came from retrieval, answer generation, or tool selection. For example, if the right chunk was retrieved but the answer missed a required fact, that points to an agent/prompt issue rather than a retrieval issue.
+
 ## Resume Bullets
 
 - Built an agent evaluation harness to test document-based AI workflows across 20+ cases, measuring answer accuracy, tool-use correctness, latency, cost, and failure modes.
