@@ -1,0 +1,286 @@
+{
+  "documents": [
+    {
+      "id": "doc_001",
+      "name": "claim_water_damage_001.txt",
+      "category": "insurance_claim",
+      "text": "Insurance claim CLM-1041. Policyholder: Harbor Dental. Loss date: March 4. Reported date: March 22. The claim describes water damage from a failed pipe in the sterilization room. The adjuster notes missing photos of damaged equipment, no plumber invoice, and a late submission beyond the 10 day notice window. Estimated claimed loss is $42,000. Coverage cannot be confirmed until documentation is supplied."
+    },
+    {
+      "id": "doc_002",
+      "name": "change_order_001.txt",
+      "category": "construction_change_order",
+      "text": "Construction change order CO-17 for the North Pier tenant buildout. Requested by field superintendent on May 9. Scope adds fire-rated glass partitions and weekend electrical labor. Original contract amount was $480,000. Added material cost is $11,200 and added labor cost is $7,300. Total cost increase is $18,500. Schedule impact is three days. Owner approval is required before work proceeds."
+    },
+    {
+      "id": "doc_003",
+      "name": "invoice_cloud_services_001.txt",
+      "category": "invoice",
+      "text": "Invoice INV-8831 from CloudMetric Labs to Lumen Retail. Billing period: April 1 to April 30. Amount due is $9,840. Purchase order PO-4482 is present. The invoice matches the contracted monthly monitoring fee and includes no overage charges. Payment terms are net 30. Finance note: approve if department code 612 is still active."
+    },
+    {
+      "id": "doc_004",
+      "name": "contract_vendor_001.txt",
+      "category": "contract",
+      "text": "Vendor services agreement with BrightDesk Support. Effective date: June 1. The contract auto-renews annually unless either party gives 60 days notice. Liability is capped at fees paid in the prior three months. Data processing addendum is missing. Security exhibit references SOC 2 but no current report is attached. Legal should create a task to obtain missing security documents before signature."
+    },
+    {
+      "id": "doc_005",
+      "name": "compliance_note_privacy_001.txt",
+      "category": "compliance_note",
+      "text": "Compliance review note CR-221. A marketing export included customer email addresses and purchase history. The export was shared with an external analytics vendor before vendor approval was completed. The note flags possible privacy policy breach and missing data processing agreement. Compliance owner recommends escalation for privacy review within two business days."
+    },
+    {
+      "id": "doc_006",
+      "name": "claim_roof_hail_002.txt",
+      "category": "insurance_claim",
+      "text": "Insurance claim CLM-1099. Property: Westbrook Storage. Reported hail damage to roof panels. Loss date: April 12. Reported date: April 14. Photos, weather report, and contractor estimate are attached. Claimed repair amount is $31,750. No prior roof exclusion appears in the policy file. Adjuster note: documentation is complete and no immediate risk is identified."
+    },
+    {
+      "id": "doc_007",
+      "name": "change_order_foundation_002.txt",
+      "category": "construction_change_order",
+      "text": "Change order CO-24 for the civic center foundation package. Geotechnical memo found unsuitable soil below gridline C. Contractor proposes undercutting, disposal, and imported structural fill. Added cost is $64,900. Schedule impact is twelve days. The change exceeds the $50,000 delegated approval threshold and should be flagged as a cost risk."
+    },
+    {
+      "id": "doc_008",
+      "name": "invoice_facilities_002.txt",
+      "category": "invoice",
+      "text": "Invoice INV-2044 from Metro Facilities. Amount due is $14,260 for after-hours HVAC repair. Purchase order is missing. The service ticket was approved by operations, but the invoice includes an unexplained emergency fee of $1,800. Accounts payable should request more information before approval."
+    },
+    {
+      "id": "doc_009",
+      "name": "contract_lease_002.txt",
+      "category": "contract",
+      "text": "Office lease amendment for Suite 410. The amendment extends the term by 24 months and increases monthly rent to $22,500 starting September 1. It also adds a restoration obligation at tenant expense. The insurance certificate is expired. Create a task for legal operations to collect updated insurance evidence."
+    },
+    {
+      "id": "doc_010",
+      "name": "compliance_note_training_002.txt",
+      "category": "compliance_note",
+      "text": "Compliance note CR-238. Quarterly AML training completion is 96 percent. Four contractors have not completed the module by the deadline. No customer impact is noted. The compliance team recommends creating a task for contractor follow-up and weekly completion tracking."
+    },
+    {
+      "id": "doc_011",
+      "name": "claim_theft_003.txt",
+      "category": "insurance_claim",
+      "text": "Insurance claim CLM-1120 for retail inventory theft. Police report number is listed as pending. Inventory spreadsheet is attached, but proof of purchase is missing for high-value tablets. Loss was reported 18 days after discovery. Claimed amount is $27,400. Adjuster should request more information on proof of purchase and police report status."
+    },
+    {
+      "id": "doc_012",
+      "name": "change_order_paint_003.txt",
+      "category": "construction_change_order",
+      "text": "Change order CO-31 for classroom repainting. Owner requested color change after mockup review. Added paint material is $2,600 and added labor is $3,900. Total cost increase is $6,500. No schedule impact. The amount is within project manager approval authority."
+    },
+    {
+      "id": "doc_013",
+      "name": "invoice_legal_003.txt",
+      "category": "invoice",
+      "text": "Invoice INV-5520 from Benton Legal. Amount due is $18,750 for contract review and employment advisory work. Matter IDs are present. The invoice exceeds the monthly legal budget by $4,250 and includes partner review time not listed in the engagement letter. Finance should flag risk for budget overage review."
+    },
+    {
+      "id": "doc_014",
+      "name": "contract_supplier_003.txt",
+      "category": "contract",
+      "text": "Supply agreement with Northline Plastics. Minimum purchase commitment is 40,000 units per quarter. Termination for convenience requires 90 days notice. The draft lacks a price adjustment cap and does not include audit rights. Procurement should create a task to revise commercial protections before approval."
+    },
+    {
+      "id": "doc_015",
+      "name": "compliance_note_safety_003.txt",
+      "category": "compliance_note",
+      "text": "Safety compliance note SF-19. Warehouse inspection found blocked emergency exit access and missing forklift inspection logs. The supervisor corrected the blocked exit during inspection, but logs remain missing for two vehicles. Escalate compliance review because inspection evidence is incomplete."
+    },
+    {
+      "id": "doc_016",
+      "name": "claim_business_interruption_004.txt",
+      "category": "insurance_claim",
+      "text": "Business interruption claim CLM-1184. Cafe closure lasted five days after a nearby electrical fire. The policyholder submitted sales history and utility outage confirmation. The claim lacks payroll records for the closure period. Estimated loss is $16,200. Request more information for payroll records."
+    },
+    {
+      "id": "doc_017",
+      "name": "change_order_mechanical_004.txt",
+      "category": "construction_change_order",
+      "text": "Mechanical change order CO-40. Engineer revised duct routing to avoid an existing beam. Added sheet metal is $8,450 and added coordination labor is $5,550. Total cost increase is $14,000. Schedule impact is one day. The change should be tracked but does not exceed risk threshold."
+    },
+    {
+      "id": "doc_018",
+      "name": "invoice_security_004.txt",
+      "category": "invoice",
+      "text": "Invoice INV-7441 from Shield Security. Amount due is $6,300 for monthly monitoring. Purchase order PO-7780 is present, rate matches the master service agreement, and no exception fees are included. Operations confirmed service completion. Approve invoice for payment."
+    },
+    {
+      "id": "doc_019",
+      "name": "contract_dpa_004.txt",
+      "category": "contract",
+      "text": "Data processing addendum for Atlas Insights. The vendor will process customer identifiers and behavioral analytics. Subprocessor list is attached. The breach notification period is 10 business days, longer than company policy of 72 hours. Escalate compliance review before signing."
+    },
+    {
+      "id": "doc_020",
+      "name": "compliance_note_access_004.txt",
+      "category": "compliance_note",
+      "text": "Access review AR-77. Three former contractors still had active dashboard accounts after termination. Access was disabled during review. The manager approval trail is missing for two privileged roles. Create a task to document approvals and verify offboarding controls."
+    }
+  ],
+  "cases": [
+    {
+      "id": "case_001",
+      "document_id": "doc_001",
+      "input": "What risks exist in this claim?",
+      "expected_answer": "The claim has missing documentation and late submission risk.",
+      "expected_facts": ["missing photos", "no plumber invoice", "late submission"],
+      "expected_action": "request_more_info"
+    },
+    {
+      "id": "case_002",
+      "document_id": "doc_002",
+      "input": "What is the total cost increase?",
+      "expected_answer": "$18,500",
+      "expected_facts": ["$11,200 material cost", "$7,300 labor cost", "$18,500 total cost increase"],
+      "expected_action": "flag_cost_risk"
+    },
+    {
+      "id": "case_003",
+      "document_id": "doc_003",
+      "input": "Should this invoice be approved?",
+      "expected_answer": "The invoice can be approved if department code 612 is active.",
+      "expected_facts": ["PO-4482 is present", "matches contracted monthly monitoring fee", "no overage charges"],
+      "expected_action": "approve_invoice"
+    },
+    {
+      "id": "case_004",
+      "document_id": "doc_004",
+      "input": "What should legal operations do before signature?",
+      "expected_answer": "Create a task to obtain the missing data processing addendum and current SOC 2 report.",
+      "expected_facts": ["data processing addendum is missing", "no current SOC 2 report", "before signature"],
+      "expected_action": "create_task"
+    },
+    {
+      "id": "case_005",
+      "document_id": "doc_005",
+      "input": "What compliance action is required?",
+      "expected_answer": "Escalate privacy review because customer data was shared before vendor approval and the data processing agreement is missing.",
+      "expected_facts": ["customer email addresses and purchase history", "external analytics vendor before approval", "missing data processing agreement"],
+      "expected_action": "escalate_compliance_review"
+    },
+    {
+      "id": "case_006",
+      "document_id": "doc_006",
+      "input": "Are there immediate claim risks?",
+      "expected_answer": "No immediate risk is identified because documentation is complete.",
+      "expected_facts": ["photos attached", "weather report attached", "contractor estimate attached"],
+      "expected_action": "create_task"
+    },
+    {
+      "id": "case_007",
+      "document_id": "doc_007",
+      "input": "Why should this change order be flagged?",
+      "expected_answer": "It should be flagged as a cost risk because the $64,900 added cost exceeds the $50,000 approval threshold.",
+      "expected_facts": ["$64,900 added cost", "twelve days schedule impact", "exceeds the $50,000 threshold"],
+      "expected_action": "flag_cost_risk"
+    },
+    {
+      "id": "case_008",
+      "document_id": "doc_008",
+      "input": "What information is missing before invoice approval?",
+      "expected_answer": "The purchase order is missing and the $1,800 emergency fee is unexplained.",
+      "expected_facts": ["purchase order is missing", "$1,800 emergency fee", "request more information"],
+      "expected_action": "request_more_info"
+    },
+    {
+      "id": "case_009",
+      "document_id": "doc_009",
+      "input": "What follow-up is needed for the lease amendment?",
+      "expected_answer": "Create a task to collect updated insurance evidence because the certificate is expired.",
+      "expected_facts": ["insurance certificate is expired", "collect updated insurance evidence", "restoration obligation"],
+      "expected_action": "create_task"
+    },
+    {
+      "id": "case_010",
+      "document_id": "doc_010",
+      "input": "What is the recommended next step?",
+      "expected_answer": "Create a task for contractor follow-up and weekly completion tracking.",
+      "expected_facts": ["four contractors incomplete", "deadline missed", "weekly completion tracking"],
+      "expected_action": "create_task"
+    },
+    {
+      "id": "case_011",
+      "document_id": "doc_011",
+      "input": "What should the adjuster request?",
+      "expected_answer": "Request more information on proof of purchase and police report status.",
+      "expected_facts": ["police report pending", "proof of purchase is missing", "reported 18 days after discovery"],
+      "expected_action": "request_more_info"
+    },
+    {
+      "id": "case_012",
+      "document_id": "doc_012",
+      "input": "What is the added cost for repainting?",
+      "expected_answer": "$6,500",
+      "expected_facts": ["$2,600 paint material", "$3,900 labor", "$6,500 total cost increase"],
+      "expected_action": "create_task"
+    },
+    {
+      "id": "case_013",
+      "document_id": "doc_013",
+      "input": "Why is the legal invoice risky?",
+      "expected_answer": "It exceeds the monthly legal budget by $4,250 and includes partner review time not listed in the engagement letter.",
+      "expected_facts": ["exceeds monthly legal budget by $4,250", "partner review time", "not listed in engagement letter"],
+      "expected_action": "flag_risk"
+    },
+    {
+      "id": "case_014",
+      "document_id": "doc_014",
+      "input": "What commercial protections need revision?",
+      "expected_answer": "Create a task to add a price adjustment cap and audit rights before approval.",
+      "expected_facts": ["lacks price adjustment cap", "does not include audit rights", "before approval"],
+      "expected_action": "create_task"
+    },
+    {
+      "id": "case_015",
+      "document_id": "doc_015",
+      "input": "Why should this safety note be escalated?",
+      "expected_answer": "Escalate compliance review because forklift inspection logs remain missing and inspection evidence is incomplete.",
+      "expected_facts": ["blocked emergency exit", "missing forklift inspection logs", "logs remain missing for two vehicles"],
+      "expected_action": "escalate_compliance_review"
+    },
+    {
+      "id": "case_016",
+      "document_id": "doc_016",
+      "input": "What is missing from the business interruption claim?",
+      "expected_answer": "Payroll records for the closure period are missing.",
+      "expected_facts": ["five days closure", "sales history submitted", "payroll records missing"],
+      "expected_action": "request_more_info"
+    },
+    {
+      "id": "case_017",
+      "document_id": "doc_017",
+      "input": "What is the total mechanical change order increase?",
+      "expected_answer": "$14,000",
+      "expected_facts": ["$8,450 sheet metal", "$5,550 coordination labor", "$14,000 total cost increase"],
+      "expected_action": "create_task"
+    },
+    {
+      "id": "case_018",
+      "document_id": "doc_018",
+      "input": "Should the security invoice be paid?",
+      "expected_answer": "Approve invoice for payment because PO-7780 is present, the rate matches, and service completion was confirmed.",
+      "expected_facts": ["PO-7780 is present", "rate matches master service agreement", "service completion confirmed"],
+      "expected_action": "approve_invoice"
+    },
+    {
+      "id": "case_019",
+      "document_id": "doc_019",
+      "input": "What is the contract compliance issue?",
+      "expected_answer": "The 10 business day breach notification period is longer than the 72 hour company policy.",
+      "expected_facts": ["customer identifiers and behavioral analytics", "10 business days", "72 hours company policy"],
+      "expected_action": "escalate_compliance_review"
+    },
+    {
+      "id": "case_020",
+      "document_id": "doc_020",
+      "input": "What follow-up task is required after access review?",
+      "expected_answer": "Create a task to document approvals and verify offboarding controls.",
+      "expected_facts": ["three former contractors had active accounts", "access was disabled", "approval trail is missing for two privileged roles"],
+      "expected_action": "create_task"
+    }
+  ]
+}
