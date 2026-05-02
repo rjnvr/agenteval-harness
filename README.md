@@ -4,6 +4,12 @@ AgentEval Harness is a small full-stack evaluation system for document-based AI 
 
 The default path uses deterministic mock mode, so the project runs locally without credentials. Claude mode is available for live model evaluation and reads credentials from the local environment through the Anthropic SDK.
 
+## Screenshots
+
+![AgentEval dashboard summary](docs/images/dashboard-summary.png)
+
+![AgentEval failed case detail](docs/images/dashboard-case-detail.png)
+
 ## What It Measures
 
 - Answer correctness against expected answers and facts
