@@ -23,6 +23,8 @@ type EvalResult = {
   question: string;
   expected_answer: string;
   expected_facts: string[];
+  matched_facts: string[];
+  missed_facts: string[];
   expected_action: string;
   answer: string;
   action: string;
@@ -104,6 +106,17 @@ function FailureBreakdown({ counts }: { counts: Record<string, number> }) {
   );
 }
 
+function FactChips({ facts, variant }: { facts: string[]; variant: "matched" | "missed" }) {
+  if (!facts.length) {
+    return <p className="muted">None</p>;
+  }
+  return (
+    <div className={`chips ${variant}`}>
+      {facts.map((fact) => <span key={fact}>{fact}</span>)}
+    </div>
+  );
+}
+
 function ResultRow({ result }: { result: EvalResult }) {
   const [open, setOpen] = useState(false);
   return (
@@ -142,9 +155,15 @@ function ResultRow({ result }: { result: EvalResult }) {
                 <p>{result.answer}</p>
                 <p className="muted">Action: {result.action || "none"} {result.action_input ? `- ${result.action_input}` : ""}</p>
               </div>
-              <div>
-                <label>Expected Facts</label>
-                <div className="chips">{result.expected_facts.map((fact) => <span key={fact}>{fact}</span>)}</div>
+              <div className="factGrid">
+                <div>
+                  <label>Matched Facts</label>
+                  <FactChips facts={result.matched_facts} variant="matched" />
+                </div>
+                <div>
+                  <label>Missed Facts</label>
+                  <FactChips facts={result.missed_facts} variant="missed" />
+                </div>
               </div>
               <div>
                 <label>Retrieved Context</label>

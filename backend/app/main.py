@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 from backend.app.config import get_settings
 from backend.app.database import Base, SessionLocal, engine, get_db
 from backend.app.dataset import expected_facts, seed_database
-from backend.app.evaluator import failure_counts
+from backend.app.evaluator import fact_coverage, failure_counts
 from backend.app.models import EvalCase, EvalResult, EvalRun
 from backend.app.runner import run_evaluation
 from backend.app.schemas import EvalCaseOut, EvalResultOut, EvalRunDetail, EvalRunOut, RunRequest, SummaryOut
@@ -40,16 +40,19 @@ def _case_out(case: EvalCase) -> EvalCaseOut:
         document=case.document,
     )
 
-
 def _result_out(result: EvalResult) -> EvalResultOut:
     case = result.case
+    facts = expected_facts(case)
+    matched_facts, missed_facts = fact_coverage(result.answer, facts)
     return EvalResultOut(
         id=result.id,
         case_id=result.case_id,
         document_name=case.document.name,
         question=case.input,
         expected_answer=case.expected_answer,
-        expected_facts=expected_facts(case),
+        expected_facts=facts,
+        matched_facts=matched_facts,
+        missed_facts=missed_facts,
         expected_action=case.expected_action,
         answer=result.answer,
         action=result.action,

@@ -31,6 +31,8 @@ class EvalResultOut(BaseModel):
     question: str
     expected_answer: str
     expected_facts: list[str]
+    matched_facts: list[str]
+    missed_facts: list[str]
     expected_action: str
     answer: str
     action: str

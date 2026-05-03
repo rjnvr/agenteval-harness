@@ -36,6 +36,12 @@ At runtime, the harness chunks the document, retrieves the most relevant chunks 
 
 The retrieved context is shown in the run detail so a reviewer can see whether a failure came from retrieval, answer generation, or tool selection. For example, if the right chunk was retrieved but the answer missed a required fact, that points to an agent/prompt issue rather than a retrieval issue.
 
+## Interpreting Results
+
+A low pass rate does not automatically mean the model is bad. The harness is intentionally strict: an answer can sound reasonable and still fail if it misses required facts, chooses the wrong workflow action, or adds unsupported details. That is the point of the project: it turns qualitative agent behavior into reviewable failure modes.
+
+For example, a Claude run may retrieve the right document context and answer the main question, but still fail because it omitted a cost component, deadline, policy threshold, or required action. The dashboard separates matched facts from missed facts so it is clear whether the issue came from retrieval, answer generation, or tool selection.
+
 ## Resume Bullets
 
 - Built an agent evaluation harness to test document-based AI workflows across 20+ cases, measuring answer accuracy, tool-use correctness, latency, cost, and failure modes.
@@ -48,7 +54,7 @@ The retrieved context is shown in the run detail so a reviewer can see whether a
 - `frontend/src`: Vite React dashboard for running and inspecting evals
 - `backend/tests`: dataset, evaluator, and API tests
 
-The MVP uses SQLite by default. A different SQL database can be wired in by setting the database URL in the local environment.
+The MVP uses SQLite by default. A different SQL database can be wired in by setting `AGENTEVAL_DATABASE_URL` in the local environment. The app intentionally ignores generic `DATABASE_URL` values so it does not accidentally connect to another local project database.
 
 ## Backend Setup
 

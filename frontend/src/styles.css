@@ -276,6 +276,19 @@ label {
   text-transform: uppercase;
 }
 
+
+.factGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.chips.missed span {
+  background: #fff1ed;
+  border-color: #ffc7ba;
+  color: #8d321d;
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -367,6 +380,10 @@ label {
 }
 
 @media (max-width: 640px) {
+  .factGrid {
+    grid-template-columns: 1fr;
+  }
+
   .metricsGrid {
     gap: 12px;
   }

@@ -21,6 +21,10 @@ def test_mock_run_and_summary() -> None:
     assert run["total_cases"] == 20
     assert run["mode"] == "mock"
     assert len(run["results"]) == 20
+    first_result = run["results"][0]
+    assert first_result["matched_facts"]
+    assert first_result["missed_facts"] == []
+    assert set(first_result["matched_facts"]) == set(first_result["expected_facts"])
     assert summary_response.status_code == 200
     assert summary_response.json()["total_tests_run"] >= 20
 

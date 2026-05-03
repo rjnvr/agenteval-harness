@@ -40,11 +40,23 @@ def _contains_money_mismatch(answer: str, document_text: str) -> bool:
     return bool(answer_amounts - doc_amounts)
 
 
+def fact_coverage(answer: str, expected_facts: list[str]) -> tuple[list[str], list[str]]:
+    answer_terms = tokenize(answer)
+    matched: list[str] = []
+    missed: list[str] = []
+    for fact in expected_facts:
+        if tokenize(fact) <= answer_terms or fact.lower() in answer.lower():
+            matched.append(fact)
+        else:
+            missed.append(fact)
+    return matched, missed
+
+
 def score_answer(answer: str, expected_answer: str, expected_facts: list[str]) -> float:
     answer_terms = tokenize(answer)
     expected_terms = tokenize(expected_answer)
-    fact_hits = [1 for fact in expected_facts if tokenize(fact) <= answer_terms or fact.lower() in answer.lower()]
-    fact_score = len(fact_hits) / max(len(expected_facts), 1)
+    matched_facts, _ = fact_coverage(answer, expected_facts)
+    fact_score = len(matched_facts) / max(len(expected_facts), 1)
     answer_score = len(answer_terms & expected_terms) / max(len(expected_terms), 1)
     return round((answer_score * 0.45) + (fact_score * 0.55), 3)
 
