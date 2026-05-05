@@ -63,7 +63,7 @@ For example, a Claude run may retrieve the right document context and answer the
 - `frontend/src`: Vite React dashboard for running and inspecting evals
 - `backend/tests`: dataset, evaluator, and API tests
 
-The app uses SQLite by default for local development. A deployed version should use hosted Postgres, such as Supabase or Neon, because Vercel serverless functions should not rely on local SQLite files for persistent storage. Set `AGENTEVAL_DATABASE_URL` to a Postgres connection string in production. The app intentionally ignores generic `DATABASE_URL` values so it does not accidentally connect to another local project database.
+The app uses SQLite by default for local development. A deployed version should use hosted Postgres, such as Supabase or Neon, because Vercel serverless functions should not rely on local SQLite files for persistent storage. Set `AGENTEVAL_DATABASE_URL` to a Postgres connection string in production. For Vercel plus Supabase, use the Supabase transaction pooler connection string; the backend disables psycopg prepared statements for pooler URLs. The app intentionally ignores generic `DATABASE_URL` values so it does not accidentally connect to another local project database.
 
 ## Backend Setup
 
@@ -127,7 +127,7 @@ This repo includes `vercel.json` and `api/index.py` so the Vite frontend and Fas
 Deployment flow:
 
 1. Create a Supabase or Neon Postgres database.
-2. Add `AGENTEVAL_DATABASE_URL` to Vercel environment variables.
+2. Copy the Supabase transaction pooler connection string and add it to Vercel as `AGENTEVAL_DATABASE_URL`.
 3. Optionally add `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`.
 4. Import this GitHub repo into Vercel and deploy.
 

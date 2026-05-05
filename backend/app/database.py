@@ -12,6 +12,8 @@ class Base(DeclarativeBase):
 def _connect_args(database_url: str) -> dict[str, object]:
     if database_url.startswith("sqlite"):
         return {"check_same_thread": False}
+    if "pooler.supabase.com" in database_url or ":6543" in database_url:
+        return {"prepare_threshold": None}
     return {}
 
 
@@ -22,7 +24,11 @@ def _engine_url(database_url: str) -> str:
     return database_url
 
 
-engine = create_engine(_engine_url(settings.database_url), connect_args=_connect_args(settings.database_url))
+engine = create_engine(
+    _engine_url(settings.database_url),
+    connect_args=_connect_args(settings.database_url),
+    pool_pre_ping=True,
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
