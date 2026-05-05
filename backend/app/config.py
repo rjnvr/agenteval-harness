@@ -9,7 +9,9 @@ class Settings(BaseSettings):
         default="claude-3-5-sonnet-latest",
         validation_alias=AliasChoices("CLAUDE_MODEL", "ANTHROPIC_MODEL"),
     )
-    anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
+    openai_model: str = Field(default="gpt-4o-mini", validation_alias="OPENAI_MODEL")
+    anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
+    openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
     api_title: str = "AgentEval Harness API"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

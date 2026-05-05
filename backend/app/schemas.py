@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DocumentOut(BaseModel):
@@ -20,8 +20,12 @@ class EvalCaseOut(BaseModel):
 
 
 class RunRequest(BaseModel):
-    mode: str = "mock"
+    provider: str = "mock"
+    model: str | None = None
     case_ids: list[str] | None = None
+    api_key: str | None = Field(default=None, repr=False)
+    judge_enabled: bool = False
+    mode: str | None = None
 
 
 class EvalResultOut(BaseModel):
@@ -38,8 +42,16 @@ class EvalResultOut(BaseModel):
     action: str
     action_input: str
     answer_match: float
+    fact_recall: float
+    fact_precision: float
     tool_correct: bool
+    action_input_score: float
+    retrieval_hit: float
+    groundedness: float
+    schema_valid: bool
+    judge_score: float | None
     hallucination_score: float
+    unsupported_claims: list[str]
     latency_ms: int
     cost_usd: float
     failure_type: str
@@ -50,6 +62,9 @@ class EvalResultOut(BaseModel):
 class EvalRunOut(BaseModel):
     id: int
     mode: str
+    provider: str
+    model: str
+    judge_enabled: bool
     status: str
     total_cases: int
     pass_rate: float
@@ -73,4 +88,3 @@ class SummaryOut(BaseModel):
     avg_cost_usd: float
     failure_counts: dict[str, int]
     failed_cases: list[EvalResultOut]
-

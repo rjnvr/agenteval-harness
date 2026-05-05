@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, joinedload
 
 from backend.app.config import get_settings
-from backend.app.database import Base, SessionLocal, engine, get_db
+from backend.app.database import Base, SessionLocal, engine, ensure_schema, get_db
 from backend.app.dataset import expected_facts, seed_database
 from backend.app.evaluator import fact_coverage, failure_counts
 from backend.app.models import EvalCase, EvalResult, EvalRun
@@ -26,6 +26,7 @@ app.add_middleware(
 @app.on_event("startup")
 def startup() -> None:
     Base.metadata.create_all(bind=engine)
+    ensure_schema()
     with SessionLocal() as db:
         seed_database(db)
 
@@ -58,8 +59,16 @@ def _result_out(result: EvalResult) -> EvalResultOut:
         action=result.action,
         action_input=result.action_input,
         answer_match=result.answer_match,
+        fact_recall=result.fact_recall,
+        fact_precision=result.fact_precision,
         tool_correct=result.tool_correct,
+        action_input_score=result.action_input_score,
+        retrieval_hit=result.retrieval_hit,
+        groundedness=result.groundedness,
+        schema_valid=result.schema_valid,
+        judge_score=result.judge_score,
         hallucination_score=result.hallucination_score,
+        unsupported_claims=list(json.loads(result.unsupported_claims_json or "[]")),
         latency_ms=result.latency_ms,
         cost_usd=result.cost_usd,
         failure_type=result.failure_type,
@@ -77,7 +86,7 @@ def list_cases(db: Session = Depends(get_db)) -> list[EvalCaseOut]:
 @app.post("/api/runs", response_model=EvalRunDetail)
 def create_run(request: RunRequest, db: Session = Depends(get_db)) -> EvalRunDetail:
     try:
-        run = run_evaluation(db, request.mode, request.case_ids)
+        run = run_evaluation(db, request)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return get_run(run.id, db)
@@ -101,6 +110,9 @@ def get_run(run_id: int, db: Session = Depends(get_db)) -> EvalRunDetail:
     return EvalRunDetail(
         id=run.id,
         mode=run.mode,
+        provider=run.provider,
+        model=run.model,
+        judge_enabled=run.judge_enabled,
         status=run.status,
         total_cases=run.total_cases,
         pass_rate=run.pass_rate,

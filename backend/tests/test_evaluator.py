@@ -1,4 +1,4 @@
-from backend.app.evaluator import failure_type, hallucination_score, score_answer
+from backend.app.evaluator import action_input_score, failure_type, groundedness, hallucination_score, retrieval_hit, score_answer
 
 
 def test_scorer_gives_credit_for_matching_facts_and_action() -> None:
@@ -34,3 +34,17 @@ def test_scorer_flags_missed_key_fact() -> None:
 def test_hallucination_flags_unsupported_money() -> None:
     assert hallucination_score("The cost is $99,000.", "The cost is $10,000.") == 1.0
 
+
+
+def test_retrieval_and_groundedness_scores() -> None:
+    facts = ["missing photos", "late submission"]
+    chunks = ["The claim has missing photos and a late submission."]
+
+    assert retrieval_hit(chunks, facts) == 1.0
+    assert groundedness("The claim has missing photos.", chunks) > 0.5
+
+
+def test_action_input_score_uses_expected_terms() -> None:
+    score = action_input_score("missing photos and late submission", "request missing claim documents", ["missing photos", "late submission"])
+
+    assert score > 0.2

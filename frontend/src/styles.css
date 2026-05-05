@@ -121,6 +121,45 @@ h2 {
   min-width: 42px;
 }
 
+.modelInput,
+.keyField {
+  background: #ffffff;
+  border: 1px solid #d8e0dc;
+  border-radius: 8px;
+  color: #25332e;
+  min-height: 42px;
+}
+
+.modelInput {
+  max-width: 230px;
+  padding: 0 12px;
+}
+
+.keyField {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  padding: 0 10px;
+}
+
+.keyField input {
+  border: 0;
+  min-width: 150px;
+  outline: 0;
+}
+
+.judgeToggle {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #d8e0dc;
+  border-radius: 8px;
+  display: inline-flex;
+  gap: 7px;
+  min-height: 42px;
+  padding: 0 12px;
+  text-transform: none;
+}
+
 .error {
   align-items: center;
   background: #fff1ed;
@@ -289,6 +328,12 @@ label {
   color: #8d321d;
 }
 
+.chips.unsupported span {
+  background: #fff7e8;
+  border-color: #f1d28f;
+  color: #7a4a07;
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -304,6 +349,47 @@ label {
   font-size: 13px;
   margin: 0;
   padding: 5px 9px;
+}
+
+.scoreGrid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.scorePill {
+  background: #eef3f0;
+  border: 1px solid #dce6e1;
+  border-radius: 8px;
+  padding: 9px 10px;
+}
+
+.scorePill span,
+.scorePill b {
+  display: block;
+}
+
+.scorePill span {
+  color: #687772;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.scorePill b {
+  font-size: 16px;
+  margin-top: 3px;
+}
+
+.contextList {
+  display: grid;
+  gap: 8px;
+}
+
+.contextList p {
+  background: #ffffff;
+  border: 1px solid #e4ebe7;
+  border-radius: 8px;
+  padding: 10px;
 }
 
 .sideStack {
@@ -380,7 +466,8 @@ label {
 }
 
 @media (max-width: 640px) {
-  .factGrid {
+  .factGrid,
+  .scoreGrid {
     grid-template-columns: 1fr;
   }
 

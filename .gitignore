@@ -7,3 +7,7 @@ agenteval.db
 frontend/node_modules/
 frontend/dist/
 .env
+agenteval.db-*
+*.db-journal
+*.db-wal
+*.db-shm

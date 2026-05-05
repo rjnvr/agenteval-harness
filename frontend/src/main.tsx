@@ -1,13 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock3, Play, RefreshCw, Target, WalletCards } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock3, KeyRound, Play, RefreshCw, Target, WalletCards } from "lucide-react";
 import "./styles.css";
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.PROD ? "" : "http://localhost:8000");
+
+type Provider = "mock" | "anthropic" | "openai";
 
 type EvalRun = {
   id: number;
   mode: string;
+  provider: Provider;
+  model: string;
+  judge_enabled: boolean;
   status: string;
   total_cases: number;
   pass_rate: number;
@@ -30,8 +35,16 @@ type EvalResult = {
   action: string;
   action_input: string;
   answer_match: number;
+  fact_recall: number;
+  fact_precision: number;
   tool_correct: boolean;
+  action_input_score: number;
+  retrieval_hit: number;
+  groundedness: number;
+  schema_valid: boolean;
+  judge_score: number | null;
   hallucination_score: number;
+  unsupported_claims: string[];
   latency_ms: number;
   cost_usd: number;
   failure_type: string;
@@ -50,6 +63,12 @@ type Summary = {
   avg_cost_usd: number;
   failure_counts: Record<string, number>;
   failed_cases: EvalResult[];
+};
+
+const DEFAULT_MODELS: Record<Provider, string> = {
+  mock: "mock-deterministic",
+  anthropic: "claude-3-5-sonnet-latest",
+  openai: "gpt-4o-mini",
 };
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -72,6 +91,12 @@ function money(value: number) {
   return `$${value.toFixed(4)}`;
 }
 
+function providerLabel(provider: string) {
+  if (provider === "anthropic") return "Claude";
+  if (provider === "openai") return "OpenAI";
+  return "Mock";
+}
+
 function MetricCard({ label, value, helper, icon }: { label: string; value: string; helper: string; icon: React.ReactNode }) {
   return (
     <section className="metric">
@@ -87,18 +112,14 @@ function MetricCard({ label, value, helper, icon }: { label: string; value: stri
 
 function FailureBreakdown({ counts }: { counts: Record<string, number> }) {
   const entries = Object.entries(counts);
-  if (!entries.length) {
-    return <div className="emptyBand">No failures in the latest run.</div>;
-  }
+  if (!entries.length) return <div className="emptyBand">No failures in the latest run.</div>;
   const total = entries.reduce((sum, [, value]) => sum + value, 0);
   return (
     <div className="breakdown">
       {entries.map(([label, value]) => (
         <div className="barRow" key={label}>
           <span>{label.replaceAll("_", " ")}</span>
-          <div className="barTrack">
-            <div style={{ width: `${Math.max((value / total) * 100, 8)}%` }} />
-          </div>
+          <div className="barTrack"><div style={{ width: `${Math.max((value / total) * 100, 8)}%` }} /></div>
           <b>{value}</b>
         </div>
       ))}
@@ -106,15 +127,13 @@ function FailureBreakdown({ counts }: { counts: Record<string, number> }) {
   );
 }
 
-function FactChips({ facts, variant }: { facts: string[]; variant: "matched" | "missed" }) {
-  if (!facts.length) {
-    return <p className="muted">None</p>;
-  }
-  return (
-    <div className={`chips ${variant}`}>
-      {facts.map((fact) => <span key={fact}>{fact}</span>)}
-    </div>
-  );
+function FactChips({ facts, variant }: { facts: string[]; variant: "matched" | "missed" | "unsupported" }) {
+  if (!facts.length) return <p className="muted">None</p>;
+  return <div className={`chips ${variant}`}>{facts.map((fact) => <span key={fact}>{fact}</span>)}</div>;
+}
+
+function ScorePill({ label, value }: { label: string; value: string }) {
+  return <div className="scorePill"><span>{label}</span><b>{value}</b></div>;
 }
 
 function ResultRow({ result }: { result: EvalResult }) {
@@ -127,10 +146,7 @@ function ResultRow({ result }: { result: EvalResult }) {
             {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           </button>
         </td>
-        <td>
-          <b>{result.case_id}</b>
-          <span>{result.document_name}</span>
-        </td>
+        <td><b>{result.case_id}</b><span>{result.document_name}</span></td>
         <td>{result.failure_type.replaceAll("_", " ")}</td>
         <td>{pct(result.answer_match)}</td>
         <td>{result.tool_correct ? "Correct" : "Wrong"}</td>
@@ -141,33 +157,34 @@ function ResultRow({ result }: { result: EvalResult }) {
           <td />
           <td colSpan={5}>
             <div className="caseDetail">
-              <div>
-                <label>Question</label>
-                <p>{result.question}</p>
+              <div className="scoreGrid">
+                <ScorePill label="Fact recall" value={pct(result.fact_recall)} />
+                <ScorePill label="Precision" value={pct(result.fact_precision)} />
+                <ScorePill label="Retrieval hit" value={pct(result.retrieval_hit)} />
+                <ScorePill label="Grounded" value={pct(result.groundedness)} />
+                <ScorePill label="Action input" value={pct(result.action_input_score)} />
+                <ScorePill label="Schema" value={result.schema_valid ? "Valid" : "Invalid"} />
+                <ScorePill label="Judge" value={result.judge_score == null ? "Off" : pct(result.judge_score)} />
               </div>
-              <div>
-                <label>Expected</label>
-                <p>{result.expected_answer}</p>
-                <p className="muted">Action: {result.expected_action}</p>
-              </div>
+              <div><label>Question</label><p>{result.question}</p></div>
+              <div><label>Expected</label><p>{result.expected_answer}</p><p className="muted">Action: {result.expected_action}</p></div>
               <div>
                 <label>Agent Output</label>
                 <p>{result.answer}</p>
                 <p className="muted">Action: {result.action || "none"} {result.action_input ? `- ${result.action_input}` : ""}</p>
               </div>
               <div className="factGrid">
-                <div>
-                  <label>Matched Facts</label>
-                  <FactChips facts={result.matched_facts} variant="matched" />
-                </div>
-                <div>
-                  <label>Missed Facts</label>
-                  <FactChips facts={result.missed_facts} variant="missed" />
-                </div>
+                <div><label>Matched Facts</label><FactChips facts={result.matched_facts} variant="matched" /></div>
+                <div><label>Missed Facts</label><FactChips facts={result.missed_facts} variant="missed" /></div>
               </div>
+              <div><label>Unsupported Claims</label><FactChips facts={result.unsupported_claims} variant="unsupported" /></div>
               <div>
                 <label>Retrieved Context</label>
-                <p>{result.retrieved_chunks[0] ?? "No retrieved context."}</p>
+                <div className="contextList">
+                  {(result.retrieved_chunks.length ? result.retrieved_chunks : ["No retrieved context."]).map((chunk, index) => (
+                    <p key={`${result.id}-${index}`}>{chunk}</p>
+                  ))}
+                </div>
               </div>
             </div>
           </td>
@@ -181,30 +198,37 @@ function App() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [runs, setRuns] = useState<EvalRun[]>([]);
   const [selectedRun, setSelectedRun] = useState<RunDetail | null>(null);
-  const [mode, setMode] = useState<"mock" | "claude">("mock");
+  const [provider, setProvider] = useState<Provider>("mock");
+  const [model, setModel] = useState(DEFAULT_MODELS.mock);
+  const [apiKey, setApiKey] = useState("");
+  const [judgeEnabled, setJudgeEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  function selectProvider(nextProvider: Provider) {
+    setProvider(nextProvider);
+    setModel(DEFAULT_MODELS[nextProvider]);
+    if (nextProvider === "mock") setApiKey("");
+  }
+
   async function refresh() {
-    const [nextSummary, nextRuns] = await Promise.all([
-      api<Summary>("/api/summary"),
-      api<EvalRun[]>("/api/runs"),
-    ]);
+    const [nextSummary, nextRuns] = await Promise.all([api<Summary>("/api/summary"), api<EvalRun[]>("/api/runs")]);
     setSummary(nextSummary);
     setRuns(nextRuns);
-    if (nextSummary.latest_run) {
-      setSelectedRun(await api<RunDetail>(`/api/runs/${nextSummary.latest_run.id}`));
-    }
+    if (nextSummary.latest_run) setSelectedRun(await api<RunDetail>(`/api/runs/${nextSummary.latest_run.id}`));
   }
 
   async function runEval() {
     setLoading(true);
     setError(null);
     try {
-      const detail = await api<RunDetail>("/api/runs", {
-        method: "POST",
-        body: JSON.stringify({ mode }),
-      });
+      const payload = {
+        provider,
+        model: model.trim() || DEFAULT_MODELS[provider],
+        api_key: provider === "mock" || !apiKey.trim() ? undefined : apiKey.trim(),
+        judge_enabled: judgeEnabled,
+      };
+      const detail = await api<RunDetail>("/api/runs", { method: "POST", body: JSON.stringify(payload) });
       setSelectedRun(detail);
       await refresh();
     } catch (err) {
@@ -214,14 +238,12 @@ function App() {
     }
   }
 
-  useEffect(() => {
-    refresh().catch((err) => setError(err instanceof Error ? err.message : "Unable to load dashboard"));
-  }, []);
+  useEffect(() => { refresh().catch((err) => setError(err instanceof Error ? err.message : "Unable to load dashboard")); }, []);
 
   const failed = selectedRun?.results.filter((result) => !result.passed) ?? summary?.failed_cases ?? [];
   const latestLabel = useMemo(() => {
     if (!summary?.latest_run) return "No runs yet";
-    return `Run ${summary.latest_run.id} - ${new Date(summary.latest_run.created_at).toLocaleString()}`;
+    return `Run ${summary.latest_run.id} - ${providerLabel(summary.latest_run.provider)} - ${new Date(summary.latest_run.created_at).toLocaleString()}`;
   }, [summary]);
 
   return (
@@ -232,17 +254,24 @@ function App() {
           <p>Evaluation dashboard for RAG and tool-using document agents.</p>
         </div>
         <div className="controls">
-          <div className="segmented" aria-label="Agent mode">
-            <button className={mode === "mock" ? "active" : ""} onClick={() => setMode("mock")}>Mock</button>
-            <button className={mode === "claude" ? "active" : ""} onClick={() => setMode("claude")}>Claude</button>
+          <div className="segmented" aria-label="Provider">
+            <button className={provider === "mock" ? "active" : ""} onClick={() => selectProvider("mock")}>Mock</button>
+            <button className={provider === "anthropic" ? "active" : ""} onClick={() => selectProvider("anthropic")}>Claude</button>
+            <button className={provider === "openai" ? "active" : ""} onClick={() => selectProvider("openai")}>OpenAI</button>
           </div>
-          <button className="secondary" onClick={() => refresh()} title="Refresh dashboard">
-            <RefreshCw size={16} />
-          </button>
-          <button className="primary" onClick={runEval} disabled={loading}>
-            <Play size={16} />
-            {loading ? "Running" : "Run evals"}
-          </button>
+          <input className="modelInput" value={model} onChange={(event) => setModel(event.target.value)} aria-label="Model name" />
+          {provider !== "mock" && (
+            <label className="keyField">
+              <KeyRound size={15} />
+              <input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="Optional run key" aria-label="API key for this run" />
+            </label>
+          )}
+          <label className="judgeToggle">
+            <input type="checkbox" checked={judgeEnabled} onChange={(event) => setJudgeEnabled(event.target.checked)} />
+            Judge
+          </label>
+          <button className="secondary" onClick={() => refresh()} title="Refresh dashboard"><RefreshCw size={16} /></button>
+          <button className="primary" onClick={runEval} disabled={loading}><Play size={16} />{loading ? "Running" : "Run evals"}</button>
         </div>
       </header>
 
@@ -257,22 +286,10 @@ function App() {
 
       <section className="contentGrid">
         <div className="panel">
-          <div className="panelHead">
-            <h2>Failed Cases</h2>
-            <span>{failed.length} failing</span>
-          </div>
+          <div className="panelHead"><h2>Failed Cases</h2><span>{failed.length} failing</span></div>
           <div className="tableWrap">
             <table>
-              <thead>
-                <tr>
-                  <th />
-                  <th>Case</th>
-                  <th>Failure</th>
-                  <th>Answer</th>
-                  <th>Tool</th>
-                  <th>Latency</th>
-                </tr>
-              </thead>
+              <thead><tr><th /><th>Case</th><th>Failure</th><th>Answer</th><th>Tool</th><th>Latency</th></tr></thead>
               <tbody>
                 {failed.length ? failed.map((result) => <ResultRow key={result.id} result={result} />) : (
                   <tr><td colSpan={6} className="emptyCell">Run the suite to inspect failures.</td></tr>
@@ -283,21 +300,14 @@ function App() {
         </div>
 
         <aside className="sideStack">
+          <div className="panel"><div className="panelHead"><h2>Failure Types</h2></div><FailureBreakdown counts={summary?.failure_counts ?? {}} /></div>
           <div className="panel">
-            <div className="panelHead">
-              <h2>Failure Types</h2>
-            </div>
-            <FailureBreakdown counts={summary?.failure_counts ?? {}} />
-          </div>
-          <div className="panel">
-            <div className="panelHead">
-              <h2>Recent Runs</h2>
-            </div>
+            <div className="panelHead"><h2>Recent Runs</h2></div>
             <div className="runList">
               {runs.map((run) => (
                 <button key={run.id} onClick={async () => setSelectedRun(await api<RunDetail>(`/api/runs/${run.id}`))}>
                   <b>Run {run.id}</b>
-                  <span>{run.mode} - {pct(run.pass_rate)} - {run.total_cases} cases</span>
+                  <span>{providerLabel(run.provider)} - {run.model} - {pct(run.pass_rate)} - {run.total_cases} cases</span>
                 </button>
               ))}
               {!runs.length && <div className="emptyBand">No eval runs yet.</div>}
@@ -310,4 +320,3 @@ function App() {
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
-
