@@ -1,0 +1,12 @@
+[
+  {"case_id": "case_001", "human_passed": true, "human_failure_mode": "none", "judge_score": 0.93, "judge_failure_mode": "none"},
+  {"case_id": "case_002", "human_passed": true, "human_failure_mode": "none", "judge_score": 0.89, "judge_failure_mode": "none"},
+  {"case_id": "case_003", "human_passed": true, "human_failure_mode": "none", "judge_score": 0.82, "judge_failure_mode": "none"},
+  {"case_id": "case_004", "human_passed": false, "human_failure_mode": "missed_key_fact", "judge_score": 0.61, "judge_failure_mode": "missed_key_fact"},
+  {"case_id": "case_005", "human_passed": false, "human_failure_mode": "unsupported_claim", "judge_score": 0.42, "judge_failure_mode": "unsupported_claim"},
+  {"case_id": "case_006", "human_passed": false, "human_failure_mode": "wrong_tool", "judge_score": 0.74, "judge_failure_mode": "none"},
+  {"case_id": "case_007", "human_passed": false, "human_failure_mode": "right_tool_wrong_args", "judge_score": 0.55, "judge_failure_mode": "right_tool_wrong_args"},
+  {"case_id": "case_008", "human_passed": false, "human_failure_mode": "retrieval_miss", "judge_score": 0.36, "judge_failure_mode": "missed_key_fact"},
+  {"case_id": "case_009", "human_passed": true, "human_failure_mode": "none", "judge_score": 0.78, "judge_failure_mode": "none"},
+  {"case_id": "case_010", "human_passed": false, "human_failure_mode": "low_answer_quality", "judge_score": 0.69, "judge_failure_mode": "low_answer_quality"}
+]

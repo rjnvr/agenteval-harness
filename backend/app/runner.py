@@ -7,15 +7,18 @@ from backend.app.agents import (
     AgentOutput,
     judge_answer,
     run_anthropic_agent,
+    run_google_agent,
     run_mock_agent,
     run_openai_agent,
+    run_openrouter_agent,
 )
 from backend.app.config import get_settings
-from backend.app.dataset import expected_facts
+from backend.app.dataset import acceptable_actions, all_fact_texts, expected_facts, required_facts, supporting_facts
 from backend.app.models import EvalCase, EvalResult, EvalRun
+from backend.app.pii import redact_value
 from backend.app.schemas import RunRequest
 
-PROVIDERS = {"mock", "anthropic", "openai"}
+PROVIDERS = {"mock", "anthropic", "openai", "google", "openrouter"}
 
 
 def _error_output(message: str) -> AgentOutput:
@@ -38,6 +41,10 @@ def _effective_provider(request: RunRequest | str) -> str:
     provider = provider.strip().lower()
     if provider == "claude":
         provider = "anthropic"
+    if provider in {"gemini", "google_gemini"}:
+        provider = "google"
+    if provider in {"llama", "meta", "meta_llama"}:
+        provider = "openrouter"
     return provider
 
 
@@ -49,18 +56,17 @@ def _provider_model(provider: str, requested_model: str | None) -> str:
         return settings.claude_model
     if provider == "openai":
         return settings.openai_model
+    if provider == "google":
+        return settings.google_model
+    if provider == "openrouter":
+        return settings.openrouter_model
     return "mock-deterministic"
 
 
 def _provider_api_key(provider: str, per_run_key: str | None) -> str | None:
-    if per_run_key:
-        return per_run_key
-    settings = get_settings()
-    if provider == "anthropic":
-        return settings.anthropic_api_key
-    if provider == "openai":
-        return settings.openai_api_key
-    return None
+    if provider == "mock":
+        return None
+    return per_run_key.strip() if per_run_key and per_run_key.strip() else None
 
 
 def run_evaluation(
@@ -82,7 +88,7 @@ def run_evaluation(
         judge_enabled = request.judge_enabled
 
     if provider not in PROVIDERS:
-        raise ValueError("provider must be 'mock', 'anthropic', or 'openai'")
+        raise ValueError("provider must be 'mock', 'anthropic', 'openai', 'google', or 'openrouter'")
 
     model = _provider_model(provider, requested_model)
     api_key = _provider_api_key(provider, per_run_key)
@@ -103,15 +109,22 @@ def run_evaluation(
     db.flush()
 
     for case in cases:
-        facts = expected_facts(case)
+        facts = required_facts(case)
+        support_facts = supporting_facts(case)
+        retrieval_facts = all_fact_texts(case)
+        actions = acceptable_actions(case)
         agent_failed = False
         try:
             if provider == "mock":
                 output = run_mock_agent(case, case.document.text, facts)
             elif provider == "anthropic":
                 output = run_anthropic_agent(case, case.document.text, model, api_key)
-            else:
+            elif provider == "openai":
                 output = run_openai_agent(case, case.document.text, model, api_key)
+            elif provider == "google":
+                output = run_google_agent(case, case.document.text, model, api_key)
+            else:
+                output = run_openrouter_agent(case, case.document.text, model, api_key)
         except (AgentError, json.JSONDecodeError, ValueError) as exc:
             output = _error_output(str(exc))
             agent_failed = True
@@ -121,9 +134,9 @@ def run_evaluation(
         fact_recall = round(len(matched_facts) / max(len(facts), 1), 3)
         fact_precision = evaluator.fact_precision(output.answer, case.document.text)
         hallucination = evaluator.hallucination_score(output.answer, case.document.text)
-        tool_correct = output.action == case.expected_action
-        action_input_score = evaluator.action_input_score(output.action_input, case.expected_answer, facts)
-        retrieval_hit = evaluator.retrieval_hit(output.retrieved_chunks, facts)
+        tool_correct = output.action in actions
+        action_input_score = evaluator.action_input_score(output.action_input, case.expected_answer, [*facts, *support_facts])
+        retrieval_hit = evaluator.retrieval_hit(output.retrieved_chunks, retrieval_facts)
         groundedness = evaluator.groundedness(output.answer, output.retrieved_chunks)
         unsupported = evaluator.unsupported_claims(output.answer, case.document.text)
         judge_score = None
@@ -133,7 +146,7 @@ def run_evaluation(
             except (AgentError, json.JSONDecodeError, ValueError):
                 judge_score = None
 
-        fail_type = "agent_error" if agent_failed else evaluator.failure_type(
+        fail_mode = "agent_error" if agent_failed else evaluator.failure_type(
             answer_match,
             tool_correct,
             hallucination,
@@ -144,8 +157,9 @@ def run_evaluation(
             retrieval_hit_value=retrieval_hit,
             groundedness_value=groundedness,
         )
+        fail_explanation = evaluator.failure_explanation(fail_mode)
         passed = (
-            fail_type == "none"
+            fail_mode == "none"
             and answer_match >= 0.72
             and fact_recall >= 1.0
             and tool_correct
@@ -154,6 +168,37 @@ def run_evaluation(
             and hallucination < 0.45
             and groundedness >= 0.45
             and output.schema_valid
+        )
+        trace = redact_value(
+            {
+                "case_input": case.input,
+                "document": {"id": case.document.id, "name": case.document.name, "category": case.document.category},
+                "retrieved_chunks": output.retrieved_chunks,
+                "agent_output": {
+                    "answer": output.answer,
+                    "action": output.action,
+                    "action_input": output.action_input,
+                    "schema_valid": output.schema_valid,
+                },
+                "scores": {
+                    "answer_match": answer_match,
+                    "fact_recall": fact_recall,
+                    "fact_precision": fact_precision,
+                    "tool_correct": tool_correct,
+                    "action_input_score": action_input_score,
+                    "retrieval_hit": retrieval_hit,
+                    "groundedness": groundedness,
+                    "hallucination_score": hallucination,
+                    "judge_score": judge_score,
+                },
+                "matched_facts": matched_facts,
+                "missed_facts": missed_facts,
+                "supporting_facts": support_facts,
+                "acceptable_actions": actions,
+                "unsupported_claims": unsupported,
+                "failure_mode": fail_mode,
+                "failure_explanation": fail_explanation,
+            }
         )
 
         db.add(
@@ -175,10 +220,13 @@ def run_evaluation(
                 hallucination_score=hallucination,
                 latency_ms=output.latency_ms,
                 cost_usd=output.cost_usd,
-                failure_type=fail_type,
+                failure_type=fail_mode,
+                failure_mode=fail_mode,
+                failure_explanation=fail_explanation,
                 passed=passed,
                 retrieved_chunks_json=json.dumps(output.retrieved_chunks),
                 unsupported_claims_json=json.dumps(unsupported),
+                trace_json=json.dumps(trace),
             )
         )
 

@@ -5,9 +5,11 @@ from sqlalchemy.orm import Session, joinedload
 
 from backend.app.config import get_settings
 from backend.app.database import Base, SessionLocal, engine, ensure_schema, get_db
-from backend.app.dataset import expected_facts, seed_database
+from backend.app.dataset import acceptable_actions, all_fact_texts, load_human_judge_labels, load_pii_samples, required_facts, seed_database, supporting_facts
 from backend.app.evaluator import fact_coverage, failure_counts
+from backend.app.calibration import calibration_summary
 from backend.app.models import EvalCase, EvalResult, EvalRun
+from backend.app.pii import measure_recall
 from backend.app.runner import run_evaluation
 from backend.app.schemas import EvalCaseOut, EvalResultOut, EvalRunDetail, EvalRunOut, RunRequest, SummaryOut
 
@@ -36,14 +38,17 @@ def _case_out(case: EvalCase) -> EvalCaseOut:
         id=case.id,
         input=case.input,
         expected_answer=case.expected_answer,
-        expected_facts=expected_facts(case),
+        expected_facts=all_fact_texts(case),
+        required_facts=required_facts(case),
+        supporting_facts=supporting_facts(case),
         expected_action=case.expected_action,
+        acceptable_actions=acceptable_actions(case),
         document=case.document,
     )
 
 def _result_out(result: EvalResult) -> EvalResultOut:
     case = result.case
-    facts = expected_facts(case)
+    facts = required_facts(case)
     matched_facts, missed_facts = fact_coverage(result.answer, facts)
     return EvalResultOut(
         id=result.id,
@@ -51,10 +56,13 @@ def _result_out(result: EvalResult) -> EvalResultOut:
         document_name=case.document.name,
         question=case.input,
         expected_answer=case.expected_answer,
-        expected_facts=facts,
+        expected_facts=all_fact_texts(case),
+        required_facts=facts,
+        supporting_facts=supporting_facts(case),
         matched_facts=matched_facts,
         missed_facts=missed_facts,
         expected_action=case.expected_action,
+        acceptable_actions=acceptable_actions(case),
         answer=result.answer,
         action=result.action,
         action_input=result.action_input,
@@ -72,8 +80,11 @@ def _result_out(result: EvalResult) -> EvalResultOut:
         latency_ms=result.latency_ms,
         cost_usd=result.cost_usd,
         failure_type=result.failure_type,
+        failure_mode=result.failure_mode,
+        failure_explanation=result.failure_explanation,
         passed=result.passed,
         retrieved_chunks=list(json.loads(result.retrieved_chunks_json)),
+        trace=dict(json.loads(result.trace_json or "{}")),
     )
 
 
@@ -123,6 +134,49 @@ def get_run(run_id: int, db: Session = Depends(get_db)) -> EvalRunDetail:
     )
 
 
+@app.get("/api/comparison")
+def get_comparison(db: Session = Depends(get_db)) -> dict[str, object]:
+    runs = (
+        db.query(EvalRun)
+        .options(joinedload(EvalRun.results))
+        .order_by(EvalRun.created_at.desc())
+        .limit(25)
+        .all()
+    )
+    items: list[dict[str, object]] = []
+    for run in runs:
+        results = list(run.results)
+        failed_results = [result for result in results if not result.passed]
+        avg_answer_match = round(sum(result.answer_match for result in results) / max(len(results), 1), 3)
+        avg_fact_recall = round(sum(result.fact_recall for result in results) / max(len(results), 1), 3)
+        avg_groundedness = round(sum(result.groundedness for result in results) / max(len(results), 1), 3)
+        items.append(
+            {
+                "id": run.id,
+                "provider": run.provider,
+                "model": run.model,
+                "created_at": run.created_at.isoformat(),
+                "total_cases": run.total_cases,
+                "pass_rate": run.pass_rate,
+                "avg_latency_ms": run.avg_latency_ms,
+                "avg_cost_usd": run.avg_cost_usd,
+                "avg_answer_match": avg_answer_match,
+                "avg_fact_recall": avg_fact_recall,
+                "avg_groundedness": avg_groundedness,
+                "failure_counts": failure_counts(results),
+                "failed_cases": [
+                    {
+                        "case_id": result.case_id,
+                        "failure_mode": result.failure_mode,
+                        "answer_match": result.answer_match,
+                    }
+                    for result in sorted(failed_results, key=lambda item: item.case_id)[:8]
+                ],
+            }
+        )
+    return {"runs": items}
+
+
 @app.get("/api/summary", response_model=SummaryOut)
 def get_summary(db: Session = Depends(get_db)) -> SummaryOut:
     latest = db.query(EvalRun).order_by(EvalRun.created_at.desc()).first()
@@ -145,4 +199,16 @@ def get_summary(db: Session = Depends(get_db)) -> SummaryOut:
         avg_cost_usd=latest.avg_cost_usd if latest else 0,
         failure_counts=failure_counts(latest_results),
         failed_cases=[_result_out(result) for result in latest_results if not result.passed],
+        calibration=calibration_summary(load_human_judge_labels()),
+        pii_redaction=measure_recall(load_pii_samples()),
     )
+
+
+@app.get("/api/calibration")
+def get_calibration() -> dict[str, object]:
+    return calibration_summary(load_human_judge_labels())
+
+
+@app.get("/api/pii-redaction")
+def get_pii_redaction() -> dict[str, object]:
+    return measure_recall(load_pii_samples())

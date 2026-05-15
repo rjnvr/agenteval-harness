@@ -1,0 +1,14 @@
+[
+  {
+    "text": "Policyholder: Jane Ramos. Email jane.ramos@example.com. Phone 415-555-0199. Claim CLM-7788 includes ACCT-9912.",
+    "expected": {"contact_name": 1, "email": 1, "phone": 1, "account_id": 2}
+  },
+  {
+    "text": "Customer: Alex Chen reported SSN 123-45-6789 and policy POLICY ZX-44A to contact risk@example.org.",
+    "expected": {"contact_name": 1, "ssn": 1, "email": 1, "account_id": 1}
+  },
+  {
+    "text": "Contact: Priya Shah, +1 212 555 0174, invoice INV-8821 and PO-7710.",
+    "expected": {"contact_name": 1, "phone": 1, "account_id": 2}
+  }
+]

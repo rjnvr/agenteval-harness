@@ -39,6 +39,12 @@ def estimate_openai_cost(model: str, input_tokens: int, output_tokens: int) -> f
     return round((input_tokens / 1_000_000 * input_per_million) + (output_tokens / 1_000_000 * output_per_million), 6)
 
 
+def estimate_gemini_cost(input_tokens: int, output_tokens: int) -> float:
+    input_per_million = 0.30
+    output_per_million = 2.50
+    return round((input_tokens / 1_000_000 * input_per_million) + (output_tokens / 1_000_000 * output_per_million), 6)
+
+
 def _mock_answer(case: Any, facts: list[str]) -> tuple[str, str]:
     action_input = ", ".join(facts[:2]) if facts else case.expected_answer
     answer = f"{case.expected_answer} Key facts: {', '.join(facts)}."
@@ -115,12 +121,15 @@ def run_anthropic_agent(case: Any, document_text: str, model: str, api_key: str 
     started = time.perf_counter()
     chunks = retrieve_chunks(document_text, case.input)
     client = Anthropic(api_key=api_key)
-    response = client.messages.create(
-        model=model,
-        max_tokens=450,
-        temperature=0,
-        messages=[{"role": "user", "content": json.dumps(_agent_prompt(case, chunks))}],
-    )
+    try:
+        response = client.messages.create(
+            model=model,
+            max_tokens=450,
+            temperature=0,
+            messages=[{"role": "user", "content": json.dumps(_agent_prompt(case, chunks))}],
+        )
+    except Exception as exc:
+        raise AgentError(f"Anthropic request failed: {exc}") from exc
     parsed = _parse_agent_json(_extract_text_from_claude_response(response))
     usage = getattr(response, "usage", None)
     input_tokens = int(getattr(usage, "input_tokens", 0) or 0)
@@ -150,15 +159,18 @@ def run_openai_agent(case: Any, document_text: str, model: str, api_key: str | N
     started = time.perf_counter()
     chunks = retrieve_chunks(document_text, case.input)
     client = OpenAI(api_key=api_key)
-    response = client.chat.completions.create(
-        model=model,
-        temperature=0,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": "You are a strict document eval agent. Return only valid JSON."},
-            {"role": "user", "content": json.dumps(_agent_prompt(case, chunks))},
-        ],
-    )
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            temperature=0,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": "You are a strict document eval agent. Return only valid JSON."},
+                {"role": "user", "content": json.dumps(_agent_prompt(case, chunks))},
+            ],
+        )
+    except Exception as exc:
+        raise AgentError(f"OpenAI request failed: {exc}") from exc
     raw = response.choices[0].message.content or ""
     parsed = _parse_agent_json(raw)
     usage = getattr(response, "usage", None)
@@ -171,6 +183,76 @@ def run_openai_agent(case: Any, document_text: str, model: str, api_key: str | N
         retrieved_chunks=chunks,
         latency_ms=max(int((time.perf_counter() - started) * 1000), 1),
         cost_usd=estimate_openai_cost(model, input_tokens, output_tokens),
+    )
+
+
+def run_google_agent(case: Any, document_text: str, model: str, api_key: str | None) -> AgentOutput:
+    try:
+        from google import genai
+    except ImportError as exc:
+        raise AgentError("Google GenAI SDK is not installed.") from exc
+    if not api_key:
+        raise AgentError("Google Gemini provider requires an API key for this run. Keys are never stored.")
+
+    started = time.perf_counter()
+    chunks = retrieve_chunks(document_text, case.input)
+    client = genai.Client(api_key=api_key)
+    try:
+        response = client.models.generate_content(
+            model=model,
+            contents=json.dumps(_agent_prompt(case, chunks)),
+        )
+    except Exception as exc:
+        raise AgentError(f"Google Gemini request failed: {exc}") from exc
+    raw = str(getattr(response, "text", "") or "")
+    parsed = _parse_agent_json(raw)
+    usage = getattr(response, "usage_metadata", None)
+    input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
+    output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
+    return AgentOutput(
+        answer=parsed["answer"],
+        action=parsed["action"],
+        action_input=parsed["action_input"],
+        retrieved_chunks=chunks,
+        latency_ms=max(int((time.perf_counter() - started) * 1000), 1),
+        cost_usd=estimate_gemini_cost(input_tokens, output_tokens),
+    )
+
+
+def run_openrouter_agent(case: Any, document_text: str, model: str, api_key: str | None) -> AgentOutput:
+    try:
+        from openai import OpenAI
+    except ImportError as exc:
+        raise AgentError("OpenAI SDK is not installed.") from exc
+    if not api_key:
+        raise AgentError("OpenRouter provider requires an API key for this run. Keys are never stored.")
+
+    started = time.perf_counter()
+    chunks = retrieve_chunks(document_text, case.input)
+    client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            temperature=0,
+            messages=[
+                {"role": "system", "content": "You are a strict document eval agent. Return only valid JSON."},
+                {"role": "user", "content": json.dumps(_agent_prompt(case, chunks))},
+            ],
+        )
+    except Exception as exc:
+        raise AgentError(f"OpenRouter request failed: {exc}") from exc
+    raw = response.choices[0].message.content or ""
+    parsed = _parse_agent_json(raw)
+    usage = getattr(response, "usage", None)
+    input_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
+    output_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
+    return AgentOutput(
+        answer=parsed["answer"],
+        action=parsed["action"],
+        action_input=parsed["action_input"],
+        retrieved_chunks=chunks,
+        latency_ms=max(int((time.perf_counter() - started) * 1000), 1),
+        cost_usd=0.0 if not (input_tokens or output_tokens) else estimate_openai_cost(model, input_tokens, output_tokens),
     )
 
 
@@ -209,6 +291,46 @@ def judge_answer(provider: str, model: str, api_key: str | None, question: str, 
             model=model,
             temperature=0,
             response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": "Return only JSON with a numeric score field."},
+                {"role": "user", "content": json.dumps({
+                    "question": question,
+                    "expected_answer": expected_answer,
+                    "agent_answer": answer,
+                    "instructions": "Score semantic correctness from 0 to 1.",
+                })},
+            ],
+        )
+        raw = response.choices[0].message.content or "{}"
+    elif provider == "google":
+        try:
+            from google import genai
+        except ImportError as exc:
+            raise AgentError("Google GenAI SDK is not installed.") from exc
+        if not api_key:
+            raise AgentError("LLM judge requires a Google Gemini API key.")
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model=model,
+            contents=json.dumps({
+                "question": question,
+                "expected_answer": expected_answer,
+                "agent_answer": answer,
+                "instructions": "Return strict JSON only: {\"score\": number between 0 and 1}.",
+            }),
+        )
+        raw = str(getattr(response, "text", "") or "{}")
+    elif provider == "openrouter":
+        try:
+            from openai import OpenAI
+        except ImportError as exc:
+            raise AgentError("OpenAI SDK is not installed.") from exc
+        if not api_key:
+            raise AgentError("LLM judge requires an OpenRouter API key.")
+        client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
+        response = client.chat.completions.create(
+            model=model,
+            temperature=0,
             messages=[
                 {"role": "system", "content": "Return only JSON with a numeric score field."},
                 {"role": "user", "content": json.dumps({

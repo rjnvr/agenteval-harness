@@ -25,6 +25,7 @@ class EvalCase(Base):
     expected_answer: Mapped[str] = mapped_column(Text, nullable=False)
     expected_facts_json: Mapped[str] = mapped_column(Text, nullable=False)
     expected_action: Mapped[str] = mapped_column(String, nullable=False)
+    acceptable_actions_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
 
     document: Mapped[Document] = relationship(back_populates="cases")
 
@@ -69,9 +70,12 @@ class EvalResult(Base):
     latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     cost_usd: Mapped[float] = mapped_column(Float, nullable=False)
     failure_type: Mapped[str] = mapped_column(String, nullable=False)
+    failure_mode: Mapped[str] = mapped_column(String, default="none", nullable=False)
+    failure_explanation: Mapped[str] = mapped_column(Text, default="", nullable=False)
     passed: Mapped[bool] = mapped_column(Boolean, nullable=False)
     retrieved_chunks_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     unsupported_claims_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    trace_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
 
     run: Mapped[EvalRun] = relationship(back_populates="results")
     case: Mapped[EvalCase] = relationship()

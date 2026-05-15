@@ -15,7 +15,10 @@ class EvalCaseOut(BaseModel):
     input: str
     expected_answer: str
     expected_facts: list[str]
+    required_facts: list[str]
+    supporting_facts: list[str]
     expected_action: str
+    acceptable_actions: list[str]
     document: DocumentOut
 
 
@@ -35,9 +38,12 @@ class EvalResultOut(BaseModel):
     question: str
     expected_answer: str
     expected_facts: list[str]
+    required_facts: list[str]
+    supporting_facts: list[str]
     matched_facts: list[str]
     missed_facts: list[str]
     expected_action: str
+    acceptable_actions: list[str]
     answer: str
     action: str
     action_input: str
@@ -55,8 +61,11 @@ class EvalResultOut(BaseModel):
     latency_ms: int
     cost_usd: float
     failure_type: str
+    failure_mode: str
+    failure_explanation: str
     passed: bool
     retrieved_chunks: list[str]
+    trace: dict[str, object]
 
 
 class EvalRunOut(BaseModel):
@@ -88,3 +97,5 @@ class SummaryOut(BaseModel):
     avg_cost_usd: float
     failure_counts: dict[str, int]
     failed_cases: list[EvalResultOut]
+    calibration: dict[str, object]
+    pii_redaction: dict[str, object]

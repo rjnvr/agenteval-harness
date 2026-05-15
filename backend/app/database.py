@@ -56,6 +56,17 @@ def ensure_schema() -> None:
                     conn.execute(text(f"ALTER TABLE eval_runs ADD COLUMN {name} {ddl}"))
 
     inspector = inspect(engine)
+    if "eval_cases" in inspector.get_table_names():
+        existing = {column["name"] for column in inspector.get_columns("eval_cases")}
+        case_columns = {
+            "acceptable_actions_json": "TEXT DEFAULT '[]' NOT NULL",
+        }
+        with engine.begin() as conn:
+            for name, ddl in case_columns.items():
+                if name not in existing:
+                    conn.execute(text(f"ALTER TABLE eval_cases ADD COLUMN {name} {ddl}"))
+
+    inspector = inspect(engine)
     if "eval_results" in inspector.get_table_names():
         existing = {column["name"] for column in inspector.get_columns("eval_results")}
         result_columns = {
@@ -67,6 +78,9 @@ def ensure_schema() -> None:
             "schema_valid": "BOOLEAN DEFAULT true NOT NULL",
             "judge_score": "FLOAT",
             "unsupported_claims_json": "TEXT DEFAULT '[]' NOT NULL",
+            "failure_mode": "VARCHAR DEFAULT 'none' NOT NULL",
+            "failure_explanation": "TEXT DEFAULT '' NOT NULL",
+            "trace_json": "TEXT DEFAULT '{}' NOT NULL",
         }
         with engine.begin() as conn:
             for name, ddl in result_columns.items():

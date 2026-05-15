@@ -67,6 +67,7 @@ h2 {
   border: 1px solid #d7dfda;
   border-radius: 8px;
   display: flex;
+  flex-wrap: wrap;
   padding: 3px;
 }
 
@@ -174,7 +175,8 @@ h2 {
 }
 
 .metricsGrid,
-.contentGrid {
+.contentGrid,
+.dashboardBand {
   display: grid;
   gap: 16px;
   margin: 0 auto;
@@ -237,6 +239,10 @@ h2 {
 .contentGrid {
   align-items: start;
   grid-template-columns: minmax(0, 1fr) 360px;
+}
+
+.dashboardBand {
+  margin-bottom: 16px;
 }
 
 .panel {
@@ -440,6 +446,65 @@ label {
   text-align: left;
 }
 
+.comparisonPanel {
+  width: 100%;
+}
+
+.compareCards {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 16px;
+}
+
+.compareCard {
+  background: #f7faf8;
+  border: 1px solid #dfe8e3;
+  border-radius: 8px;
+  color: #22312b;
+  cursor: pointer;
+  display: grid;
+  gap: 5px;
+  min-height: 128px;
+  padding: 14px;
+  text-align: left;
+}
+
+.compareCard span,
+.compareCard em {
+  color: #66736f;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.compareCard b {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.compareCard strong {
+  color: #1f6f5b;
+  font-size: 34px;
+  line-height: 1;
+}
+
+.compareTable {
+  min-width: 980px;
+}
+
+.textButton {
+  background: transparent;
+  border: 0;
+  color: #1f6f5b;
+  cursor: pointer;
+  font-weight: 760;
+  padding: 0;
+}
+
+.bestMetric {
+  color: #1f6f5b;
+}
+
 .emptyBand,
 .emptyCell {
   color: #687772;
@@ -463,6 +528,10 @@ label {
   .contentGrid {
     grid-template-columns: 1fr;
   }
+
+  .compareCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
@@ -477,6 +546,10 @@ label {
 
   .metric {
     min-height: 110px;
+  }
+
+  .compareCards {
+    grid-template-columns: 1fr;
   }
 
   .primary {
