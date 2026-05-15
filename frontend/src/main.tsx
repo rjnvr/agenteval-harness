@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock3, Fingerprint, GitCompare, KeyRound, Play, RefreshCw, Scale, Target, WalletCards } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock3, Fingerprint, GitCompare, Info, KeyRound, Play, RefreshCw, Scale, Sparkles, Target, WalletCards } from "lucide-react";
 import "./styles.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.PROD ? "" : "http://localhost:8000");
@@ -363,10 +363,19 @@ function App() {
               <input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={`${providerLabel(provider)} API key for this run`} aria-label="API key for this run" />
             </label>
           )}
-          <label className="judgeToggle">
-            <input type="checkbox" checked={judgeEnabled} onChange={(event) => setJudgeEnabled(event.target.checked)} />
-            Judge
-          </label>
+          <div className={`judgeControl ${judgeEnabled ? "active" : ""}`}>
+            <label className="judgeToggle">
+              <input type="checkbox" checked={judgeEnabled} onChange={(event) => setJudgeEnabled(event.target.checked)} />
+              <span className="judgeIcon"><Sparkles size={18} /></span>
+              <span><b>LLM Judge</b><em>{judgeEnabled ? "Enabled" : "Off"}</em></span>
+            </label>
+            <button className="judgeInfo" type="button" aria-label="What LLM Judge does">
+              <Info size={17} />
+              <span className="judgePopup" role="tooltip">
+                Runs an extra model call to score semantic correctness against the expected answer. It helps catch fuzzy answer quality, but can add latency and provider cost.
+              </span>
+            </button>
+          </div>
           <button className="secondary" onClick={() => refresh()} title="Refresh dashboard"><RefreshCw size={16} /></button>
           <button className="primary" onClick={runEval} disabled={loading}><Play size={16} />{loading ? "Running" : "Run evals"}</button>
         </div>

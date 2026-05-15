@@ -149,16 +149,117 @@ h2 {
   outline: 0;
 }
 
-.judgeToggle {
+.judgeControl {
   align-items: center;
-  background: #ffffff;
-  border: 1px solid #d8e0dc;
+  background: #20392f;
+  border: 1px solid #20392f;
   border-radius: 8px;
   display: inline-flex;
-  gap: 7px;
-  min-height: 42px;
-  padding: 0 12px;
-  text-transform: none;
+  gap: 4px;
+  min-height: 52px;
+  position: relative;
+  box-shadow: 0 10px 24px rgba(31, 111, 91, 0.18);
+}
+
+.judgeControl.active {
+  background: #1f6f5b;
+  border-color: #1f6f5b;
+}
+
+.judgeToggle {
+  align-items: center;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 10px 0 14px;
+}
+
+.judgeToggle input {
+  height: 18px;
+  margin: 0;
+  width: 18px;
+}
+
+.judgeIcon {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 7px;
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.judgeToggle b,
+.judgeToggle em {
+  display: block;
+  line-height: 1.1;
+}
+
+.judgeToggle b {
+  font-size: 14px;
+}
+
+.judgeToggle em {
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 11px;
+  font-style: normal;
+  margin-top: 3px;
+}
+
+.judgeInfo {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  border: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0 7px 7px 0;
+  color: #ffffff;
+  cursor: help;
+  display: inline-flex;
+  height: 52px;
+  justify-content: center;
+  position: relative;
+  width: 42px;
+}
+
+.judgePopup {
+  background: #17231f;
+  border: 1px solid #30433c;
+  border-radius: 8px;
+  box-shadow: 0 16px 34px rgba(17, 28, 24, 0.26);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  opacity: 0;
+  padding: 12px;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  text-align: left;
+  top: calc(100% + 10px);
+  transform: translateY(-4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  width: 280px;
+  z-index: 10;
+}
+
+.judgePopup::before {
+  border-bottom: 8px solid #17231f;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  content: "";
+  position: absolute;
+  right: 12px;
+  top: -8px;
+}
+
+.judgeInfo:hover .judgePopup,
+.judgeInfo:focus-visible .judgePopup {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .error {
