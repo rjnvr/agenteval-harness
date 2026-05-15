@@ -88,6 +88,13 @@ type ComparisonRun = {
 
 type Comparison = { runs: ComparisonRun[] };
 
+type EvalSummary = {
+  run_id: number;
+  provider: Provider;
+  model: string;
+  summary: string;
+};
+
 const DEFAULT_MODELS: Record<Provider, string> = {
   mock: "mock-deterministic",
   anthropic: "claude-sonnet-4-20250514",
@@ -297,6 +304,8 @@ function App() {
   const [apiKey, setApiKey] = useState("");
   const [judgeEnabled, setJudgeEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [evalSummary, setEvalSummary] = useState<EvalSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function selectProvider(nextProvider: Provider) {
@@ -330,6 +339,24 @@ function App() {
       setError(err instanceof Error ? err.message : "Run failed");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function summarizeLatestRun() {
+    setSummaryLoading(true);
+    setError(null);
+    try {
+      const payload = {
+        provider,
+        model: model.trim() || DEFAULT_MODELS[provider],
+        api_key: provider === "mock" || !apiKey.trim() ? undefined : apiKey.trim(),
+      };
+      const nextSummary = await api<EvalSummary>("/api/runs/latest/summary", { method: "POST", body: JSON.stringify(payload) });
+      setEvalSummary(nextSummary);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Summary failed");
+    } finally {
+      setSummaryLoading(false);
     }
   }
 
@@ -390,6 +417,25 @@ function App() {
         <MetricCard label="Avg Cost" value={money(summary?.avg_cost_usd ?? 0)} helper="Per case estimate" icon={<WalletCards size={18} />} />
         <MetricCard label="Judge Kappa" value={(summary?.calibration?.pass_kappa ?? 0).toFixed(2)} helper={`${summary?.calibration?.sample_size ?? 0} labeled traces`} icon={<Scale size={18} />} />
         <MetricCard label="PII Recall" value={pct(summary?.pii_redaction?.recall ?? 0)} helper={`${summary?.pii_redaction?.redacted_entities ?? 0}/${summary?.pii_redaction?.expected_entities ?? 0} entities`} icon={<Fingerprint size={18} />} />
+      </section>
+
+      <section className="summaryWidget">
+        <div>
+          <span className="eyebrow">Latest Run Summary</span>
+          <h2>Explain the eval results</h2>
+          <p>Generate a concise readout of the latest run, including what passed, what failed, failure patterns, and next steps.</p>
+        </div>
+        <button className="summaryButton" onClick={summarizeLatestRun} disabled={summaryLoading || !summary?.latest_run}>
+          <Sparkles size={17} />{summaryLoading ? "Summarizing" : "Summarize latest run"}
+        </button>
+        {evalSummary && (
+          <div className="summaryOutput">
+            <label>Run {evalSummary.run_id} - {providerLabel(evalSummary.provider)} - {evalSummary.model}</label>
+            {evalSummary.summary.split("\n").filter(Boolean).map((line, index) => (
+              <p key={`${evalSummary.run_id}-${index}`}>{line}</p>
+            ))}
+          </div>
+        )}
       </section>
 
       <div className="dashboardBand">

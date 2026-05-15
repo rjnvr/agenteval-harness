@@ -11,10 +11,11 @@ from backend.app.database import Base, SessionLocal, engine, ensure_schema, get_
 from backend.app.dataset import acceptable_actions, all_fact_texts, load_human_judge_labels, load_pii_samples, required_facts, seed_database, supporting_facts
 from backend.app.evaluator import fact_coverage, failure_counts
 from backend.app.calibration import calibration_summary
+from backend.app.agents import AgentError, summarize_eval_report
 from backend.app.models import EvalCase, EvalResult, EvalRun
 from backend.app.pii import measure_recall
-from backend.app.runner import run_evaluation
-from backend.app.schemas import EvalCaseOut, EvalResultOut, EvalRunDetail, EvalRunOut, RunRequest, SummaryOut
+from backend.app.runner import _effective_provider, _provider_api_key, _provider_model, run_evaluation
+from backend.app.schemas import EvalCaseOut, EvalResultOut, EvalRunDetail, EvalRunOut, EvalSummaryRequest, RunRequest, SummaryOut
 
 settings = get_settings()
 app = FastAPI(title=settings.api_title)
@@ -183,6 +184,69 @@ def get_comparison(db: Session = Depends(get_db)) -> dict[str, object]:
             }
         )
     return {"runs": items}
+
+
+def _latest_run_report(run: EvalRun) -> dict[str, object]:
+    results = sorted(run.results, key=lambda result: result.case_id)
+    failures = [result for result in results if not result.passed]
+    return {
+        "run_id": run.id,
+        "provider": run.provider,
+        "model": run.model,
+        "judge_enabled": run.judge_enabled,
+        "total_cases": run.total_cases,
+        "pass_rate": run.pass_rate,
+        "avg_latency_ms": run.avg_latency_ms,
+        "avg_cost_usd": run.avg_cost_usd,
+        "failure_counts": failure_counts(results),
+        "cases": [
+            {
+                "case_id": result.case_id,
+                "document_name": result.case.document.name,
+                "question": result.case.input,
+                "passed": result.passed,
+                "failure_mode": result.failure_mode,
+                "failure_explanation": result.failure_explanation,
+                "answer_match": result.answer_match,
+                "fact_recall": result.fact_recall,
+                "tool_correct": result.tool_correct,
+                "missed_facts": fact_coverage(result.answer, required_facts(result.case))[1],
+                "unsupported_claims": list(json.loads(result.unsupported_claims_json or "[]")),
+            }
+            for result in results
+        ],
+        "failed_case_sample": [
+            {
+                "case_id": result.case_id,
+                "failure_mode": result.failure_mode,
+                "answer_match": result.answer_match,
+                "fact_recall": result.fact_recall,
+            }
+            for result in failures[:8]
+        ],
+    }
+
+
+@app.post("/api/runs/latest/summary")
+def summarize_latest_run(request: EvalSummaryRequest, db: Session = Depends(get_db)) -> dict[str, object]:
+    latest = (
+        db.query(EvalRun)
+        .options(joinedload(EvalRun.results).joinedload(EvalResult.case).joinedload(EvalCase.document))
+        .order_by(EvalRun.created_at.desc())
+        .first()
+    )
+    if not latest:
+        raise HTTPException(status_code=400, detail="Run at least one eval before generating a summary.")
+
+    provider = _effective_provider(request)
+    model = _provider_model(provider, request.model)
+    api_key = _provider_api_key(provider, request.api_key)
+    report = _latest_run_report(latest)
+    try:
+        summary = summarize_eval_report(provider, model, api_key, report)
+    except (AgentError, json.JSONDecodeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"run_id": latest.id, "provider": provider, "model": model, "summary": summary, "report": report}
 
 
 @app.get("/api/summary", response_model=SummaryOut)

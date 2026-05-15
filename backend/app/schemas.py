@@ -31,6 +31,13 @@ class RunRequest(BaseModel):
     mode: str | None = None
 
 
+class EvalSummaryRequest(BaseModel):
+    provider: str = "mock"
+    model: str | None = None
+    api_key: str | None = Field(default=None, repr=False)
+    mode: str | None = None
+
+
 class EvalResultOut(BaseModel):
     id: int
     case_id: str
