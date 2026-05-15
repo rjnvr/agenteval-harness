@@ -348,3 +348,91 @@ def judge_answer(provider: str, model: str, api_key: str | None, question: str, 
     parsed = json.loads(_strip_code_fence(raw))
     score = float(parsed.get("score", 0))
     return round(max(min(score, 1.0), 0.0), 3)
+
+
+def summarize_eval_report(provider: str, model: str, api_key: str | None, report: dict[str, Any]) -> str:
+    prompt = {
+        "eval_report": report,
+        "instructions": (
+            "Write a concise but useful evaluation summary for a product/AI eval dashboard. "
+            "Explain the overall result, what the pass rate means, the most important failure modes, "
+            "which cases are worth inspecting, likely root causes, and concrete next steps. "
+            "Do not invent data not present in the report. Use plain text with short sections."
+        ),
+    }
+    if provider == "mock":
+        failure_counts = report.get("failure_counts", {})
+        total_cases = int(report.get("total_cases", 0) or 0)
+        pass_rate = float(report.get("pass_rate", 0) or 0)
+        failures = ", ".join(f"{key.replace('_', ' ')}: {value}" for key, value in dict(failure_counts).items()) or "none"
+        return (
+            f"Overall: latest run covered {total_cases} cases with a {round(pass_rate * 100)}% pass rate.\n\n"
+            f"What it means: the run {'passed cleanly' if pass_rate == 1 else 'has failures that need review'} under the current rubric.\n\n"
+            f"Failure modes: {failures}.\n\n"
+            "Next steps: inspect the failed cases, compare missed facts against expected facts, and rerun with Judge enabled when you want semantic scoring."
+        )
+
+    raw = "{}"
+    if provider == "anthropic":
+        try:
+            from anthropic import Anthropic
+        except ImportError as exc:
+            raise AgentError("Anthropic SDK is not installed.") from exc
+        if not api_key:
+            raise AgentError("Eval summary requires an Anthropic API key for this request.")
+        client = Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model=model,
+            max_tokens=900,
+            temperature=0,
+            messages=[{"role": "user", "content": json.dumps(prompt)}],
+        )
+        return _extract_text_from_claude_response(response)
+    if provider == "openai":
+        try:
+            from openai import OpenAI
+        except ImportError as exc:
+            raise AgentError("OpenAI SDK is not installed.") from exc
+        if not api_key:
+            raise AgentError("Eval summary requires an OpenAI API key for this request.")
+        client = OpenAI(api_key=api_key)
+        response = client.chat.completions.create(
+            model=model,
+            temperature=0,
+            messages=[
+                {"role": "system", "content": "You summarize AI evaluation results for product teams."},
+                {"role": "user", "content": json.dumps(prompt)},
+            ],
+        )
+        raw = response.choices[0].message.content or ""
+    elif provider == "google":
+        try:
+            from google import genai
+        except ImportError as exc:
+            raise AgentError("Google GenAI SDK is not installed.") from exc
+        if not api_key:
+            raise AgentError("Eval summary requires a Google Gemini API key for this request.")
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(model=model, contents=json.dumps(prompt))
+        raw = str(getattr(response, "text", "") or "")
+    elif provider == "openrouter":
+        try:
+            from openai import OpenAI
+        except ImportError as exc:
+            raise AgentError("OpenAI SDK is not installed.") from exc
+        if not api_key:
+            raise AgentError("Eval summary requires an OpenRouter API key for this request.")
+        client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
+        response = client.chat.completions.create(
+            model=model,
+            temperature=0,
+            messages=[
+                {"role": "system", "content": "You summarize AI evaluation results for product teams."},
+                {"role": "user", "content": json.dumps(prompt)},
+            ],
+        )
+        raw = response.choices[0].message.content or ""
+    else:
+        raise AgentError(f"Unsupported summary provider: {provider}")
+
+    return raw.strip() or "No summary was returned by the model."

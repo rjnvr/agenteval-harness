@@ -123,6 +123,20 @@ def test_comparison_endpoint_returns_run_metrics() -> None:
     assert "failure_counts" in latest
 
 
+def test_latest_run_summary_uses_request_provider() -> None:
+    with TestClient(app) as client:
+        created = client.post("/api/runs", json={"provider": "mock", "case_ids": ["case_001"]})
+        summary = client.post("/api/runs/latest/summary", json={"provider": "mock"})
+
+    assert created.status_code == 200
+    assert summary.status_code == 200
+    body = summary.json()
+    assert body["run_id"] == created.json()["id"]
+    assert body["provider"] == "mock"
+    assert "latest run covered" in body["summary"]
+    assert body["report"]["cases"]
+
+
 def test_legacy_mode_shape_still_works() -> None:
     with TestClient(app) as client:
         response = client.post("/api/runs", json={"mode": "mock", "case_ids": ["case_001"]})
