@@ -1,6 +1,9 @@
 import json
+from pathlib import Path
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, joinedload
 
 from backend.app.config import get_settings
@@ -15,6 +18,11 @@ from backend.app.schemas import EvalCaseOut, EvalResultOut, EvalRunDetail, EvalR
 
 settings = get_settings()
 app = FastAPI(title=settings.api_title)
+FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+FRONTEND_INDEX = FRONTEND_DIST / "index.html"
+
+if (FRONTEND_DIST / "assets").exists():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
 
 app.add_middleware(
     CORSMiddleware,
@@ -212,3 +220,19 @@ def get_calibration() -> dict[str, object]:
 @app.get("/api/pii-redaction")
 def get_pii_redaction() -> dict[str, object]:
     return measure_recall(load_pii_samples())
+
+
+@app.get("/")
+def serve_frontend() -> FileResponse:
+    if not FRONTEND_INDEX.exists():
+        raise HTTPException(status_code=404, detail="Frontend build not found")
+    return FileResponse(FRONTEND_INDEX)
+
+
+@app.get("/{path:path}")
+def serve_frontend_route(path: str) -> FileResponse:
+    if path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="Not Found")
+    if not FRONTEND_INDEX.exists():
+        raise HTTPException(status_code=404, detail="Frontend build not found")
+    return FileResponse(FRONTEND_INDEX)
