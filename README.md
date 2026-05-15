@@ -4,6 +4,8 @@ AgentEval Harness is a small full-stack evaluation system for document-based AI 
 
 The default path uses deterministic mock mode, so the project runs locally without credentials. Live runs support Anthropic Claude and OpenAI models, using either a per-run key entered in the dashboard or a provider key from the local environment.
 
+New to evals? Read the [beginner evaluation guide](docs/evaluation-guide.md) for a ground-up explanation of the project, the dashboard, and each metric.
+
 ## Screenshots
 
 ![AgentEval dashboard summary](docs/images/dashboard-summary.png)
@@ -20,6 +22,8 @@ The default path uses deterministic mock mode, so the project runs locally witho
 - JSON schema validity
 - Optional LLM judge score for semantic grading
 - Hallucination signals, latency, estimated cost, and failure reason
+
+For plain-English definitions of every metric, see the [evaluation guide](docs/evaluation-guide.md#metric-reference).
 
 ## How Evaluation Works
 
@@ -132,4 +136,3 @@ Deployment flow:
 4. Import this GitHub repo into Vercel and deploy.
 
 The MVP keeps runs synchronous. Vercel functions can time out on long live full-suite runs, so use selected `case_ids` for small live demos. A production version should move long eval suites to a background worker or queue and manage schema changes with migrations such as Alembic.
-
