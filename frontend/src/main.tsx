@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock3, KeyRound, Play, RefreshCw, Target, WalletCards } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock3, Fingerprint, GitCompare, KeyRound, Play, RefreshCw, Scale, Target, WalletCards } from "lucide-react";
 import "./styles.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.PROD ? "" : "http://localhost:8000");
 
-type Provider = "mock" | "anthropic" | "openai";
+type Provider = "mock" | "anthropic" | "openai" | "google" | "openrouter";
 
 type EvalRun = {
   id: number;
@@ -48,8 +48,11 @@ type EvalResult = {
   latency_ms: number;
   cost_usd: number;
   failure_type: string;
+  failure_mode: string;
+  failure_explanation: string;
   passed: boolean;
   retrieved_chunks: string[];
+  trace: Record<string, unknown>;
 };
 
 type RunDetail = EvalRun & { results: EvalResult[] };
@@ -63,12 +66,34 @@ type Summary = {
   avg_cost_usd: number;
   failure_counts: Record<string, number>;
   failed_cases: EvalResult[];
+  calibration: { sample_size: number; pass_agreement: number; pass_kappa: number; failure_mode_agreement: number; threshold: number };
+  pii_redaction: { expected_entities: number; redacted_entities: number; recall: number };
 };
+
+type ComparisonRun = {
+  id: number;
+  provider: Provider;
+  model: string;
+  created_at: string;
+  total_cases: number;
+  pass_rate: number;
+  avg_latency_ms: number;
+  avg_cost_usd: number;
+  avg_answer_match: number;
+  avg_fact_recall: number;
+  avg_groundedness: number;
+  failure_counts: Record<string, number>;
+  failed_cases: { case_id: string; failure_mode: string; answer_match: number }[];
+};
+
+type Comparison = { runs: ComparisonRun[] };
 
 const DEFAULT_MODELS: Record<Provider, string> = {
   mock: "mock-deterministic",
-  anthropic: "claude-3-5-sonnet-latest",
+  anthropic: "claude-sonnet-4-20250514",
   openai: "gpt-4o-mini",
+  google: "gemini-2.5-flash",
+  openrouter: "meta-llama/llama-3.3-70b-instruct",
 };
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -94,6 +119,8 @@ function money(value: number) {
 function providerLabel(provider: string) {
   if (provider === "anthropic") return "Claude";
   if (provider === "openai") return "OpenAI";
+  if (provider === "google") return "Gemini";
+  if (provider === "openrouter") return "OpenRouter";
   return "Mock";
 }
 
@@ -136,6 +163,71 @@ function ScorePill({ label, value }: { label: string; value: string }) {
   return <div className="scorePill"><span>{label}</span><b>{value}</b></div>;
 }
 
+function topFailure(counts: Record<string, number>) {
+  const [mode, count] = Object.entries(counts).sort((left, right) => right[1] - left[1])[0] ?? [];
+  if (!mode) return "None";
+  return `${mode.replaceAll("_", " ")} (${count})`;
+}
+
+function ComparisonPanel({ runs, onSelectRun }: { runs: ComparisonRun[]; onSelectRun: (id: number) => void }) {
+  if (!runs.length) {
+    return (
+      <section className="panel comparisonPanel">
+        <div className="panelHead"><h2>LLM Comparison</h2><span>No runs yet</span></div>
+        <div className="emptyBand">Run two or more model evaluations to compare results.</div>
+      </section>
+    );
+  }
+  const bestPassRate = Math.max(...runs.map((run) => run.pass_rate));
+  return (
+    <section className="panel comparisonPanel">
+      <div className="panelHead"><h2>LLM Comparison</h2><span>{runs.length} recent runs</span></div>
+      <div className="compareCards">
+        {runs.slice(0, 4).map((run) => (
+          <button className="compareCard" key={run.id} onClick={() => onSelectRun(run.id)}>
+            <span>{providerLabel(run.provider)}</span>
+            <b>{run.model}</b>
+            <strong>{pct(run.pass_rate)}</strong>
+            <em>{run.total_cases} cases - {Math.round(run.avg_latency_ms)} ms avg</em>
+          </button>
+        ))}
+      </div>
+      <div className="tableWrap">
+        <table className="compareTable">
+          <thead>
+            <tr>
+              <th>Run</th>
+              <th>Model</th>
+              <th>Pass</th>
+              <th>Answer</th>
+              <th>Recall</th>
+              <th>Grounded</th>
+              <th>Latency</th>
+              <th>Cost</th>
+              <th>Top Failure</th>
+            </tr>
+          </thead>
+          <tbody>
+            {runs.map((run) => (
+              <tr key={run.id}>
+                <td><button className="textButton" onClick={() => onSelectRun(run.id)}>Run {run.id}</button><span>{new Date(run.created_at).toLocaleDateString()}</span></td>
+                <td><b>{providerLabel(run.provider)}</b><span>{run.model}</span></td>
+                <td><b className={run.pass_rate === bestPassRate ? "bestMetric" : ""}>{pct(run.pass_rate)}</b></td>
+                <td>{pct(run.avg_answer_match)}</td>
+                <td>{pct(run.avg_fact_recall)}</td>
+                <td>{pct(run.avg_groundedness)}</td>
+                <td>{Math.round(run.avg_latency_ms)} ms</td>
+                <td>{money(run.avg_cost_usd)}</td>
+                <td>{topFailure(run.failure_counts)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 function ResultRow({ result }: { result: EvalResult }) {
   const [open, setOpen] = useState(false);
   return (
@@ -147,7 +239,7 @@ function ResultRow({ result }: { result: EvalResult }) {
           </button>
         </td>
         <td><b>{result.case_id}</b><span>{result.document_name}</span></td>
-        <td>{result.failure_type.replaceAll("_", " ")}</td>
+        <td>{result.failure_mode.replaceAll("_", " ")}</td>
         <td>{pct(result.answer_match)}</td>
         <td>{result.tool_correct ? "Correct" : "Wrong"}</td>
         <td>{result.latency_ms} ms</td>
@@ -178,6 +270,7 @@ function ResultRow({ result }: { result: EvalResult }) {
                 <div><label>Missed Facts</label><FactChips facts={result.missed_facts} variant="missed" /></div>
               </div>
               <div><label>Unsupported Claims</label><FactChips facts={result.unsupported_claims} variant="unsupported" /></div>
+              <div><label>Failure Rationale</label><p>{result.failure_explanation}</p></div>
               <div>
                 <label>Retrieved Context</label>
                 <div className="contextList">
@@ -197,6 +290,7 @@ function ResultRow({ result }: { result: EvalResult }) {
 function App() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [runs, setRuns] = useState<EvalRun[]>([]);
+  const [comparison, setComparison] = useState<ComparisonRun[]>([]);
   const [selectedRun, setSelectedRun] = useState<RunDetail | null>(null);
   const [provider, setProvider] = useState<Provider>("mock");
   const [model, setModel] = useState(DEFAULT_MODELS.mock);
@@ -212,9 +306,10 @@ function App() {
   }
 
   async function refresh() {
-    const [nextSummary, nextRuns] = await Promise.all([api<Summary>("/api/summary"), api<EvalRun[]>("/api/runs")]);
+    const [nextSummary, nextRuns, nextComparison] = await Promise.all([api<Summary>("/api/summary"), api<EvalRun[]>("/api/runs"), api<Comparison>("/api/comparison")]);
     setSummary(nextSummary);
     setRuns(nextRuns);
+    setComparison(nextComparison.runs);
     if (nextSummary.latest_run) setSelectedRun(await api<RunDetail>(`/api/runs/${nextSummary.latest_run.id}`));
   }
 
@@ -258,12 +353,14 @@ function App() {
             <button className={provider === "mock" ? "active" : ""} onClick={() => selectProvider("mock")}>Mock</button>
             <button className={provider === "anthropic" ? "active" : ""} onClick={() => selectProvider("anthropic")}>Claude</button>
             <button className={provider === "openai" ? "active" : ""} onClick={() => selectProvider("openai")}>OpenAI</button>
+            <button className={provider === "google" ? "active" : ""} onClick={() => selectProvider("google")}>Gemini</button>
+            <button className={provider === "openrouter" ? "active" : ""} onClick={() => selectProvider("openrouter")}>Llama</button>
           </div>
           <input className="modelInput" value={model} onChange={(event) => setModel(event.target.value)} aria-label="Model name" />
           {provider !== "mock" && (
             <label className="keyField">
               <KeyRound size={15} />
-              <input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="Optional run key" aria-label="API key for this run" />
+              <input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={`${providerLabel(provider)} API key for this run`} aria-label="API key for this run" />
             </label>
           )}
           <label className="judgeToggle">
@@ -282,7 +379,13 @@ function App() {
         <MetricCard label="Pass Rate" value={pct(summary?.pass_rate ?? 0)} helper={latestLabel} icon={<CheckCircle2 size={18} />} />
         <MetricCard label="Avg Latency" value={`${Math.round(summary?.avg_latency_ms ?? 0)} ms`} helper="Latest run average" icon={<Clock3 size={18} />} />
         <MetricCard label="Avg Cost" value={money(summary?.avg_cost_usd ?? 0)} helper="Per case estimate" icon={<WalletCards size={18} />} />
+        <MetricCard label="Judge Kappa" value={(summary?.calibration?.pass_kappa ?? 0).toFixed(2)} helper={`${summary?.calibration?.sample_size ?? 0} labeled traces`} icon={<Scale size={18} />} />
+        <MetricCard label="PII Recall" value={pct(summary?.pii_redaction?.recall ?? 0)} helper={`${summary?.pii_redaction?.redacted_entities ?? 0}/${summary?.pii_redaction?.expected_entities ?? 0} entities`} icon={<Fingerprint size={18} />} />
       </section>
+
+      <div className="dashboardBand">
+        <ComparisonPanel runs={comparison} onSelectRun={async (id) => setSelectedRun(await api<RunDetail>(`/api/runs/${id}`))} />
+      </div>
 
       <section className="contentGrid">
         <div className="panel">

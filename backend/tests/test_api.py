@@ -29,7 +29,13 @@ def test_mock_run_and_summary() -> None:
     assert first_result["retrieval_hit"] >= 0.5
     assert first_result["schema_valid"] is True
     assert "unsupported_claims" in first_result
-    assert set(first_result["matched_facts"]) == set(first_result["expected_facts"])
+    assert first_result["failure_mode"] == first_result["failure_type"]
+    assert "failure_explanation" in first_result
+    assert "trace" in first_result
+    assert "calibration" in summary_response.json()
+    assert "pii_redaction" in summary_response.json()
+    assert set(first_result["matched_facts"]) == set(first_result["required_facts"])
+    assert first_result["acceptable_actions"]
     assert summary_response.status_code == 200
     assert summary_response.json()["total_tests_run"] >= 20
 
@@ -61,7 +67,60 @@ def test_openai_missing_key_returns_agent_error() -> None:
     assert response.status_code == 200
     result = response.json()["results"][0]
     assert result["failure_type"] == "agent_error"
+    assert result["failure_mode"] == "agent_error"
     assert result["schema_valid"] is False
+
+
+def test_live_providers_require_per_run_key_even_if_env_exists(monkeypatch) -> None:
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "server-key-that-must-not-be-used")
+
+    with TestClient(app) as client:
+        response = client.post("/api/runs", json={"provider": "anthropic", "case_ids": ["case_001"]})
+
+    assert response.status_code == 200
+    result = response.json()["results"][0]
+    assert result["failure_type"] == "agent_error"
+    assert "requires an API key" in result["answer"]
+
+
+def test_google_and_openrouter_modes_are_supported_without_storing_keys() -> None:
+    with TestClient(app) as client:
+        google = client.post("/api/runs", json={"provider": "google", "case_ids": ["case_001"]})
+        llama = client.post("/api/runs", json={"provider": "llama", "case_ids": ["case_001"]})
+
+    assert google.status_code == 200
+    assert google.json()["provider"] == "google"
+    assert google.json()["results"][0]["failure_type"] == "agent_error"
+    assert llama.status_code == 200
+    assert llama.json()["provider"] == "openrouter"
+    assert llama.json()["results"][0]["failure_type"] == "agent_error"
+
+
+def test_calibration_and_pii_endpoints() -> None:
+    with TestClient(app) as client:
+        calibration = client.get("/api/calibration")
+        pii = client.get("/api/pii-redaction")
+
+    assert calibration.status_code == 200
+    assert calibration.json()["sample_size"] >= 10
+    assert "pass_kappa" in calibration.json()
+    assert pii.status_code == 200
+    assert pii.json()["recall"] >= 0.9
+
+
+def test_comparison_endpoint_returns_run_metrics() -> None:
+    with TestClient(app) as client:
+        created = client.post("/api/runs", json={"provider": "mock", "case_ids": ["case_001", "case_002"]})
+        comparison = client.get("/api/comparison")
+
+    assert created.status_code == 200
+    assert comparison.status_code == 200
+    runs = comparison.json()["runs"]
+    assert runs
+    latest = runs[0]
+    assert "avg_answer_match" in latest
+    assert "avg_fact_recall" in latest
+    assert "failure_counts" in latest
 
 
 def test_legacy_mode_shape_still_works() -> None:

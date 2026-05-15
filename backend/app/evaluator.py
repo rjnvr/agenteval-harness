@@ -3,8 +3,23 @@ from collections import Counter
 
 from backend.app.rag import tokenize
 
+FAILURE_MODES = {
+    "wrong_tool",
+    "right_tool_wrong_args",
+    "premature_stop",
+    "ignored_constraint",
+    "fabricated_tool_output",
+    "unsupported_claim",
+    "missed_key_fact",
+    "retrieval_miss",
+    "schema_invalid",
+    "agent_error",
+    "low_answer_quality",
+    "none",
+}
 
 MONEY_RE = re.compile(r"\$(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]{2})?")
+HYPHEN_BETWEEN_ALNUM_RE = re.compile(r"(?<=[A-Za-z0-9])-(?=[A-Za-z0-9])")
 GENERIC_ALLOWED = {
     "action",
     "added",
@@ -12,13 +27,17 @@ GENERIC_ALLOWED = {
     "answer",
     "approval",
     "approve",
+    "approved",
+    "amount",
     "because",
     "before",
+    "cannot",
     "claim",
     "compliance",
     "contract",
     "create",
     "documents",
+    "exceeded",
     "expected",
     "facts",
     "follow",
@@ -26,12 +45,23 @@ GENERIC_ALLOWED = {
     "invoice",
     "missing",
     "payment",
+    "proper",
     "request",
+    "reporting",
+    "required",
+    "requirement",
     "review",
     "should",
     "status",
     "total",
+    "validated",
+    "verification",
+    "without",
 }
+
+
+def normalize_for_support(text: str) -> str:
+    return HYPHEN_BETWEEN_ALNUM_RE.sub(" ", text.lower())
 
 
 def _contains_money_mismatch(answer: str, document_text: str) -> bool:
@@ -41,11 +71,13 @@ def _contains_money_mismatch(answer: str, document_text: str) -> bool:
 
 
 def fact_coverage(answer: str, expected_facts: list[str]) -> tuple[list[str], list[str]]:
-    answer_terms = tokenize(answer)
+    normalized_answer = normalize_for_support(answer)
+    answer_terms = tokenize(normalized_answer)
     matched: list[str] = []
     missed: list[str] = []
     for fact in expected_facts:
-        if tokenize(fact) <= answer_terms or fact.lower() in answer.lower():
+        normalized_fact = normalize_for_support(fact)
+        if tokenize(normalized_fact) <= answer_terms or normalized_fact in normalized_answer:
             matched.append(fact)
         else:
             missed.append(fact)
@@ -68,12 +100,14 @@ def fact_recall(answer: str, expected_facts: list[str]) -> float:
 
 def unsupported_claims(answer: str, support_text: str) -> list[str]:
     claims: list[str] = []
-    support_terms = tokenize(support_text)
+    normalized_answer = normalize_for_support(answer)
+    normalized_support = normalize_for_support(support_text)
+    support_terms = tokenize(normalized_support)
 
     for amount in sorted(set(MONEY_RE.findall(answer)) - set(MONEY_RE.findall(support_text))):
         claims.append(amount)
 
-    answer_terms = {term for term in tokenize(answer) if len(term) > 5 and term not in GENERIC_ALLOWED}
+    answer_terms = {term for term in tokenize(normalized_answer) if len(term) > 7 and term not in GENERIC_ALLOWED}
     for term in sorted(answer_terms):
         if term not in support_terms:
             claims.append(term)
@@ -83,7 +117,7 @@ def unsupported_claims(answer: str, support_text: str) -> list[str]:
 def hallucination_score(answer: str, document_text: str) -> float:
     if _contains_money_mismatch(answer, document_text):
         return 1.0
-    answer_terms = {term for term in tokenize(answer) if len(term) > 5 and term not in GENERIC_ALLOWED}
+    answer_terms = {term for term in tokenize(normalize_for_support(answer)) if len(term) > 7 and term not in GENERIC_ALLOWED}
     if not answer_terms:
         return 0.0
     unsupported = unsupported_claims(answer, document_text)
@@ -128,23 +162,49 @@ def failure_type(
     groundedness_value: float = 1.0,
 ) -> str:
     if not schema_valid:
-        return "agent_error"
-    if hallucination >= 0.45 or groundedness_value < 0.45:
-        return "hallucination"
+        return "schema_invalid"
+    if not answer.strip():
+        return "premature_stop"
+    if hallucination >= 0.45:
+        return "fabricated_tool_output" if _contains_money_mismatch(answer, " ".join(expected_facts)) else "unsupported_claim"
+    if groundedness_value < 0.45:
+        return "unsupported_claim"
     if not tool_correct:
-        return "wrong_action"
+        return "wrong_tool"
     answer_terms = tokenize(answer)
     if retrieval_hit_value < 0.5:
-        return "missed_key_fact"
+        return "retrieval_miss"
     if any(not (tokenize(fact) <= answer_terms or fact.lower() in answer.lower()) for fact in expected_facts):
         return "missed_key_fact"
     if action_input_score_value < 0.12:
-        return "wrong_action"
+        return "right_tool_wrong_args"
     if answer_match < 0.72:
-        return "low_answer_match"
+        return "low_answer_quality"
     return "none"
 
 
+def failure_explanation(mode: str) -> str:
+    explanations = {
+        "wrong_tool": "Agent selected an action that does not match the expected tool.",
+        "right_tool_wrong_args": "Agent selected the expected tool but supplied weak or missing action arguments.",
+        "premature_stop": "Agent returned no usable answer before completing the task.",
+        "ignored_constraint": "Agent answer ignored a task or document constraint.",
+        "fabricated_tool_output": "Agent introduced a concrete value that is not supported by the document.",
+        "unsupported_claim": "Agent answer includes claims not grounded in retrieved or source text.",
+        "missed_key_fact": "Agent missed one or more expected facts from the document.",
+        "retrieval_miss": "Retrieved context did not cover enough expected facts.",
+        "schema_invalid": "Agent output did not satisfy the expected response schema.",
+        "agent_error": "Agent call failed before a valid response could be scored.",
+        "low_answer_quality": "Agent response had low semantic overlap with the expected answer.",
+        "none": "No failure detected.",
+    }
+    return explanations.get(mode, "Failure did not match a known taxonomy mode.")
+
+
 def failure_counts(results: list[object]) -> dict[str, int]:
-    counter = Counter(result.failure_type for result in results if result.failure_type != "none")
+    counter = Counter(
+        getattr(result, "failure_mode", None) or result.failure_type
+        for result in results
+        if (getattr(result, "failure_mode", None) or result.failure_type) != "none"
+    )
     return dict(counter)

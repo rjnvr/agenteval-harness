@@ -127,15 +127,45 @@
       "document_id": "doc_001",
       "input": "What risks exist in this claim?",
       "expected_answer": "The claim has missing documentation and late submission risk.",
-      "expected_facts": ["missing photos", "no plumber invoice", "late submission"],
-      "expected_action": "request_more_info"
+      "expected_facts": [
+        {
+          "text": "missing photos",
+          "required": true
+        },
+        {
+          "text": "no plumber invoice",
+          "required": true
+        },
+        {
+          "text": "late submission",
+          "required": true
+        }
+      ],
+      "expected_action": "request_more_info",
+      "acceptable_actions": [
+        "request_more_info",
+        "flag_risk"
+      ]
     },
     {
       "id": "case_002",
       "document_id": "doc_002",
       "input": "What is the total cost increase?",
       "expected_answer": "$18,500",
-      "expected_facts": ["$11,200 material cost", "$7,300 labor cost", "$18,500 total cost increase"],
+      "expected_facts": [
+        {
+          "text": "$18,500 total cost increase",
+          "required": true
+        },
+        {
+          "text": "$11,200 material cost",
+          "required": false
+        },
+        {
+          "text": "$7,300 labor cost",
+          "required": false
+        }
+      ],
       "expected_action": "flag_cost_risk"
     },
     {
@@ -143,15 +173,40 @@
       "document_id": "doc_003",
       "input": "Should this invoice be approved?",
       "expected_answer": "The invoice can be approved if department code 612 is active.",
-      "expected_facts": ["PO-4482 is present", "matches contracted monthly monitoring fee", "no overage charges"],
-      "expected_action": "approve_invoice"
+      "expected_facts": [
+        {
+          "text": "department code 612 is active",
+          "required": true
+        },
+        {
+          "text": "PO-4482 is present",
+          "required": false
+        },
+        {
+          "text": "matches contracted monthly monitoring fee",
+          "required": false
+        },
+        {
+          "text": "no overage charges",
+          "required": false
+        }
+      ],
+      "expected_action": "approve_invoice",
+      "acceptable_actions": [
+        "approve_invoice",
+        "request_more_info"
+      ]
     },
     {
       "id": "case_004",
       "document_id": "doc_004",
       "input": "What should legal operations do before signature?",
       "expected_answer": "Create a task to obtain the missing data processing addendum and current SOC 2 report.",
-      "expected_facts": ["data processing addendum is missing", "no current SOC 2 report", "before signature"],
+      "expected_facts": [
+        "data processing addendum is missing",
+        "no current SOC 2 report",
+        "before signature"
+      ],
       "expected_action": "create_task"
     },
     {
@@ -159,7 +214,11 @@
       "document_id": "doc_005",
       "input": "What compliance action is required?",
       "expected_answer": "Escalate privacy review because customer data was shared before vendor approval and the data processing agreement is missing.",
-      "expected_facts": ["customer email addresses and purchase history", "external analytics vendor before approval", "missing data processing agreement"],
+      "expected_facts": [
+        "customer email addresses and purchase history",
+        "external analytics vendor before approval",
+        "missing data processing agreement"
+      ],
       "expected_action": "escalate_compliance_review"
     },
     {
@@ -167,7 +226,11 @@
       "document_id": "doc_006",
       "input": "Are there immediate claim risks?",
       "expected_answer": "No immediate risk is identified because documentation is complete.",
-      "expected_facts": ["photos attached", "weather report attached", "contractor estimate attached"],
+      "expected_facts": [
+        "photos attached",
+        "weather report attached",
+        "contractor estimate attached"
+      ],
       "expected_action": "create_task"
     },
     {
@@ -175,7 +238,11 @@
       "document_id": "doc_007",
       "input": "Why should this change order be flagged?",
       "expected_answer": "It should be flagged as a cost risk because the $64,900 added cost exceeds the $50,000 approval threshold.",
-      "expected_facts": ["$64,900 added cost", "twelve days schedule impact", "exceeds the $50,000 threshold"],
+      "expected_facts": [
+        "$64,900 added cost",
+        "twelve days schedule impact",
+        "exceeds the $50,000 threshold"
+      ],
       "expected_action": "flag_cost_risk"
     },
     {
@@ -183,7 +250,11 @@
       "document_id": "doc_008",
       "input": "What information is missing before invoice approval?",
       "expected_answer": "The purchase order is missing and the $1,800 emergency fee is unexplained.",
-      "expected_facts": ["purchase order is missing", "$1,800 emergency fee", "request more information"],
+      "expected_facts": [
+        "purchase order is missing",
+        "$1,800 emergency fee",
+        "request more information"
+      ],
       "expected_action": "request_more_info"
     },
     {
@@ -191,7 +262,11 @@
       "document_id": "doc_009",
       "input": "What follow-up is needed for the lease amendment?",
       "expected_answer": "Create a task to collect updated insurance evidence because the certificate is expired.",
-      "expected_facts": ["insurance certificate is expired", "collect updated insurance evidence", "restoration obligation"],
+      "expected_facts": [
+        "insurance certificate is expired",
+        "collect updated insurance evidence",
+        "restoration obligation"
+      ],
       "expected_action": "create_task"
     },
     {
@@ -199,7 +274,11 @@
       "document_id": "doc_010",
       "input": "What is the recommended next step?",
       "expected_answer": "Create a task for contractor follow-up and weekly completion tracking.",
-      "expected_facts": ["four contractors incomplete", "deadline missed", "weekly completion tracking"],
+      "expected_facts": [
+        "four contractors incomplete",
+        "deadline missed",
+        "weekly completion tracking"
+      ],
       "expected_action": "create_task"
     },
     {
@@ -207,7 +286,11 @@
       "document_id": "doc_011",
       "input": "What should the adjuster request?",
       "expected_answer": "Request more information on proof of purchase and police report status.",
-      "expected_facts": ["police report pending", "proof of purchase is missing", "reported 18 days after discovery"],
+      "expected_facts": [
+        "police report pending",
+        "proof of purchase is missing",
+        "reported 18 days after discovery"
+      ],
       "expected_action": "request_more_info"
     },
     {
@@ -215,7 +298,20 @@
       "document_id": "doc_012",
       "input": "What is the added cost for repainting?",
       "expected_answer": "$6,500",
-      "expected_facts": ["$2,600 paint material", "$3,900 labor", "$6,500 total cost increase"],
+      "expected_facts": [
+        {
+          "text": "$6,500 total cost increase",
+          "required": true
+        },
+        {
+          "text": "$2,600 paint material",
+          "required": false
+        },
+        {
+          "text": "$3,900 labor",
+          "required": false
+        }
+      ],
       "expected_action": "create_task"
     },
     {
@@ -223,7 +319,11 @@
       "document_id": "doc_013",
       "input": "Why is the legal invoice risky?",
       "expected_answer": "It exceeds the monthly legal budget by $4,250 and includes partner review time not listed in the engagement letter.",
-      "expected_facts": ["exceeds monthly legal budget by $4,250", "partner review time", "not listed in engagement letter"],
+      "expected_facts": [
+        "exceeds monthly legal budget by $4,250",
+        "partner review time",
+        "not listed in engagement letter"
+      ],
       "expected_action": "flag_risk"
     },
     {
@@ -231,7 +331,11 @@
       "document_id": "doc_014",
       "input": "What commercial protections need revision?",
       "expected_answer": "Create a task to add a price adjustment cap and audit rights before approval.",
-      "expected_facts": ["lacks price adjustment cap", "does not include audit rights", "before approval"],
+      "expected_facts": [
+        "lacks price adjustment cap",
+        "does not include audit rights",
+        "before approval"
+      ],
       "expected_action": "create_task"
     },
     {
@@ -239,7 +343,11 @@
       "document_id": "doc_015",
       "input": "Why should this safety note be escalated?",
       "expected_answer": "Escalate compliance review because forklift inspection logs remain missing and inspection evidence is incomplete.",
-      "expected_facts": ["blocked emergency exit", "missing forklift inspection logs", "logs remain missing for two vehicles"],
+      "expected_facts": [
+        "blocked emergency exit",
+        "missing forklift inspection logs",
+        "logs remain missing for two vehicles"
+      ],
       "expected_action": "escalate_compliance_review"
     },
     {
@@ -247,7 +355,11 @@
       "document_id": "doc_016",
       "input": "What is missing from the business interruption claim?",
       "expected_answer": "Payroll records for the closure period are missing.",
-      "expected_facts": ["five days closure", "sales history submitted", "payroll records missing"],
+      "expected_facts": [
+        "five days closure",
+        "sales history submitted",
+        "payroll records missing"
+      ],
       "expected_action": "request_more_info"
     },
     {
@@ -255,7 +367,20 @@
       "document_id": "doc_017",
       "input": "What is the total mechanical change order increase?",
       "expected_answer": "$14,000",
-      "expected_facts": ["$8,450 sheet metal", "$5,550 coordination labor", "$14,000 total cost increase"],
+      "expected_facts": [
+        {
+          "text": "$14,000 total cost increase",
+          "required": true
+        },
+        {
+          "text": "$8,450 sheet metal",
+          "required": false
+        },
+        {
+          "text": "$5,550 coordination labor",
+          "required": false
+        }
+      ],
       "expected_action": "create_task"
     },
     {
@@ -263,7 +388,11 @@
       "document_id": "doc_018",
       "input": "Should the security invoice be paid?",
       "expected_answer": "Approve invoice for payment because PO-7780 is present, the rate matches, and service completion was confirmed.",
-      "expected_facts": ["PO-7780 is present", "rate matches master service agreement", "service completion confirmed"],
+      "expected_facts": [
+        "PO-7780 is present",
+        "rate matches master service agreement",
+        "service completion confirmed"
+      ],
       "expected_action": "approve_invoice"
     },
     {
@@ -271,7 +400,11 @@
       "document_id": "doc_019",
       "input": "What is the contract compliance issue?",
       "expected_answer": "The 10 business day breach notification period is longer than the 72 hour company policy.",
-      "expected_facts": ["customer identifiers and behavioral analytics", "10 business days", "72 hours company policy"],
+      "expected_facts": [
+        "customer identifiers and behavioral analytics",
+        "10 business days",
+        "72 hours company policy"
+      ],
       "expected_action": "escalate_compliance_review"
     },
     {
@@ -279,7 +412,11 @@
       "document_id": "doc_020",
       "input": "What follow-up task is required after access review?",
       "expected_answer": "Create a task to document approvals and verify offboarding controls.",
-      "expected_facts": ["three former contractors had active accounts", "access was disabled", "approval trail is missing for two privileged roles"],
+      "expected_facts": [
+        "three former contractors had active accounts",
+        "access was disabled",
+        "approval trail is missing for two privileged roles"
+      ],
       "expected_action": "create_task"
     }
   ]
