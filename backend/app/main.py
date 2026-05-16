@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 from backend.app.config import get_settings
 from backend.app.database import Base, SessionLocal, engine, ensure_schema, get_db
 from backend.app.dataset import acceptable_actions, all_fact_texts, load_human_judge_labels, load_pii_samples, required_facts, seed_database, supporting_facts
-from backend.app.evaluator import fact_coverage, failure_counts
+from backend.app.evaluator import average_score_breakdown, fact_coverage, failure_counts, score_breakdown
 from backend.app.calibration import calibration_summary
 from backend.app.agents import AgentError, summarize_eval_report
 from backend.app.models import EvalCase, EvalResult, EvalRun
@@ -94,6 +94,7 @@ def _result_out(result: EvalResult) -> EvalResultOut:
         passed=result.passed,
         retrieved_chunks=list(json.loads(result.retrieved_chunks_json)),
         trace=dict(json.loads(result.trace_json or "{}")),
+        score_breakdown=score_breakdown(result),
     )
 
 
@@ -159,6 +160,7 @@ def get_comparison(db: Session = Depends(get_db)) -> dict[str, object]:
         avg_answer_match = round(sum(result.answer_match for result in results) / max(len(results), 1), 3)
         avg_fact_recall = round(sum(result.fact_recall for result in results) / max(len(results), 1), 3)
         avg_groundedness = round(sum(result.groundedness for result in results) / max(len(results), 1), 3)
+        breakdown = average_score_breakdown(results)
         items.append(
             {
                 "id": run.id,
@@ -172,6 +174,13 @@ def get_comparison(db: Session = Depends(get_db)) -> dict[str, object]:
                 "avg_answer_match": avg_answer_match,
                 "avg_fact_recall": avg_fact_recall,
                 "avg_groundedness": avg_groundedness,
+                "strict_pass_rate": run.pass_rate,
+                "score_breakdown": breakdown,
+                "avg_semantic_quality": breakdown["semantic_quality"],
+                "avg_fact_completeness": breakdown["fact_completeness"],
+                "avg_tool_accuracy": breakdown["tool_accuracy"],
+                "avg_grounding": breakdown["grounding"],
+                "avg_retrieval_quality": breakdown["retrieval_quality"],
                 "failure_counts": failure_counts(results),
                 "failed_cases": [
                     {
@@ -196,6 +205,8 @@ def _latest_run_report(run: EvalRun) -> dict[str, object]:
         "judge_enabled": run.judge_enabled,
         "total_cases": run.total_cases,
         "pass_rate": run.pass_rate,
+        "strict_pass_rate": run.pass_rate,
+        "score_breakdown": average_score_breakdown(results),
         "avg_latency_ms": run.avg_latency_ms,
         "avg_cost_usd": run.avg_cost_usd,
         "failure_counts": failure_counts(results),
@@ -271,6 +282,7 @@ def get_summary(db: Session = Depends(get_db)) -> SummaryOut:
         avg_cost_usd=latest.avg_cost_usd if latest else 0,
         failure_counts=failure_counts(latest_results),
         failed_cases=[_result_out(result) for result in latest_results if not result.passed],
+        score_breakdown=average_score_breakdown(latest_results),
         calibration=calibration_summary(load_human_judge_labels()),
         pii_redaction=measure_recall(load_pii_samples()),
     )

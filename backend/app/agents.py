@@ -355,7 +355,8 @@ def summarize_eval_report(provider: str, model: str, api_key: str | None, report
         "eval_report": report,
         "instructions": (
             "Write a concise but useful evaluation summary for a product/AI eval dashboard. "
-            "Explain the overall result, what the pass rate means, the most important failure modes, "
+            "Explain the overall result, that strict pass rate is an acceptance gate, how the score_breakdown "
+            "quality signals differ from strict pass/fail, the most important failure modes, "
             "which cases are worth inspecting, likely root causes, and concrete next steps. "
             "Do not invent data not present in the report. Use plain text with short sections."
         ),
@@ -365,9 +366,12 @@ def summarize_eval_report(provider: str, model: str, api_key: str | None, report
         total_cases = int(report.get("total_cases", 0) or 0)
         pass_rate = float(report.get("pass_rate", 0) or 0)
         failures = ", ".join(f"{key.replace('_', ' ')}: {value}" for key, value in dict(failure_counts).items()) or "none"
+        breakdown = dict(report.get("score_breakdown", {}) or {})
+        quality = ", ".join(f"{key.replace('_', ' ')}: {round(float(value) * 100)}%" for key, value in breakdown.items()) or "unavailable"
         return (
             f"Overall: latest run covered {total_cases} cases with a {round(pass_rate * 100)}% pass rate.\n\n"
-            f"What it means: the run {'passed cleanly' if pass_rate == 1 else 'has failures that need review'} under the current rubric.\n\n"
+            f"What it means: strict pass rate is the acceptance gate; the run {'passed cleanly' if pass_rate == 1 else 'has failures that need review'} under the current rubric.\n\n"
+            f"Quality signals: {quality}.\n\n"
             f"Failure modes: {failures}.\n\n"
             "Next steps: inspect the failed cases, compare missed facts against expected facts, and rerun with Judge enabled when you want semantic scoring."
         )

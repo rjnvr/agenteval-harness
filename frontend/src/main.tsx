@@ -53,6 +53,7 @@ type EvalResult = {
   passed: boolean;
   retrieved_chunks: string[];
   trace: Record<string, unknown>;
+  score_breakdown: ScoreBreakdown;
 };
 
 type RunDetail = EvalRun & { results: EvalResult[] };
@@ -66,8 +67,17 @@ type Summary = {
   avg_cost_usd: number;
   failure_counts: Record<string, number>;
   failed_cases: EvalResult[];
+  score_breakdown: ScoreBreakdown;
   calibration: { sample_size: number; pass_agreement: number; pass_kappa: number; failure_mode_agreement: number; threshold: number };
   pii_redaction: { expected_entities: number; redacted_entities: number; recall: number };
+};
+
+type ScoreBreakdown = {
+  semantic_quality: number;
+  fact_completeness: number;
+  tool_accuracy: number;
+  grounding: number;
+  retrieval_quality: number;
 };
 
 type ComparisonRun = {
@@ -82,6 +92,13 @@ type ComparisonRun = {
   avg_answer_match: number;
   avg_fact_recall: number;
   avg_groundedness: number;
+  strict_pass_rate: number;
+  score_breakdown: ScoreBreakdown;
+  avg_semantic_quality: number;
+  avg_fact_completeness: number;
+  avg_tool_accuracy: number;
+  avg_grounding: number;
+  avg_retrieval_quality: number;
   failure_counts: Record<string, number>;
   failed_cases: { case_id: string; failure_mode: string; answer_match: number }[];
 };
@@ -170,6 +187,16 @@ function ScorePill({ label, value }: { label: string; value: string }) {
   return <div className="scorePill"><span>{label}</span><b>{value}</b></div>;
 }
 
+function QualitySignal({ label, value, helper }: { label: string; value: number; helper: string }) {
+  return (
+    <div className="qualitySignal">
+      <div><span>{label}</span><b>{pct(value)}</b></div>
+      <div className="signalTrack"><div style={{ width: `${Math.max(value * 100, 4)}%` }} /></div>
+      <em>{helper}</em>
+    </div>
+  );
+}
+
 function topFailure(counts: Record<string, number>) {
   const [mode, count] = Object.entries(counts).sort((left, right) => right[1] - left[1])[0] ?? [];
   if (!mode) return "None";
@@ -186,6 +213,7 @@ function ComparisonPanel({ runs, onSelectRun }: { runs: ComparisonRun[]; onSelec
     );
   }
   const bestPassRate = Math.max(...runs.map((run) => run.pass_rate));
+  const bestSemantic = Math.max(...runs.map((run) => run.avg_semantic_quality ?? run.avg_answer_match));
   return (
     <section className="panel comparisonPanel">
       <div className="panelHead"><h2>LLM Comparison</h2><span>{runs.length} recent runs</span></div>
@@ -195,7 +223,8 @@ function ComparisonPanel({ runs, onSelectRun }: { runs: ComparisonRun[]; onSelec
             <span>{providerLabel(run.provider)}</span>
             <b>{run.model}</b>
             <strong>{pct(run.pass_rate)}</strong>
-            <em>{run.total_cases} cases - {Math.round(run.avg_latency_ms)} ms avg</em>
+            <em>Strict pass</em>
+            <small>{pct(run.avg_semantic_quality ?? run.avg_answer_match)} answer quality - {pct(run.avg_grounding ?? run.avg_groundedness)} grounded</small>
           </button>
         ))}
       </div>
@@ -206,9 +235,11 @@ function ComparisonPanel({ runs, onSelectRun }: { runs: ComparisonRun[]; onSelec
               <th>Run</th>
               <th>Model</th>
               <th>Pass</th>
-              <th>Answer</th>
-              <th>Recall</th>
-              <th>Grounded</th>
+              <th>Quality</th>
+              <th>Facts</th>
+              <th>Tools</th>
+              <th>Grounding</th>
+              <th>Retrieval</th>
               <th>Latency</th>
               <th>Cost</th>
               <th>Top Failure</th>
@@ -220,9 +251,11 @@ function ComparisonPanel({ runs, onSelectRun }: { runs: ComparisonRun[]; onSelec
                 <td><button className="textButton" onClick={() => onSelectRun(run.id)}>Run {run.id}</button><span>{new Date(run.created_at).toLocaleDateString()}</span></td>
                 <td><b>{providerLabel(run.provider)}</b><span>{run.model}</span></td>
                 <td><b className={run.pass_rate === bestPassRate ? "bestMetric" : ""}>{pct(run.pass_rate)}</b></td>
-                <td>{pct(run.avg_answer_match)}</td>
-                <td>{pct(run.avg_fact_recall)}</td>
-                <td>{pct(run.avg_groundedness)}</td>
+                <td><b className={(run.avg_semantic_quality ?? run.avg_answer_match) === bestSemantic ? "bestMetric" : ""}>{pct(run.avg_semantic_quality ?? run.avg_answer_match)}</b></td>
+                <td>{pct(run.avg_fact_completeness ?? run.avg_fact_recall)}</td>
+                <td>{pct(run.avg_tool_accuracy ?? 0)}</td>
+                <td>{pct(run.avg_grounding ?? run.avg_groundedness)}</td>
+                <td>{pct(run.avg_retrieval_quality ?? 0)}</td>
                 <td>{Math.round(run.avg_latency_ms)} ms</td>
                 <td>{money(run.avg_cost_usd)}</td>
                 <td>{topFailure(run.failure_counts)}</td>
@@ -264,6 +297,9 @@ function ResultRow({ result }: { result: EvalResult }) {
                 <ScorePill label="Action input" value={pct(result.action_input_score)} />
                 <ScorePill label="Schema" value={result.schema_valid ? "Valid" : "Invalid"} />
                 <ScorePill label="Judge" value={result.judge_score == null ? "Off" : pct(result.judge_score)} />
+                <ScorePill label="Quality" value={pct(result.score_breakdown.semantic_quality)} />
+                <ScorePill label="Tool score" value={pct(result.score_breakdown.tool_accuracy)} />
+                <ScorePill label="Retrieval" value={pct(result.score_breakdown.retrieval_quality)} />
               </div>
               <div><label>Question</label><p>{result.question}</p></div>
               <div><label>Expected</label><p>{result.expected_answer}</p><p className="muted">Action: {result.expected_action}</p></div>
@@ -412,11 +448,25 @@ function App() {
 
       <section className="metricsGrid">
         <MetricCard label="Tests Run" value={String(summary?.total_tests_run ?? 0)} helper={`${summary?.total_runs ?? 0} total runs`} icon={<Target size={18} />} />
-        <MetricCard label="Pass Rate" value={pct(summary?.pass_rate ?? 0)} helper={latestLabel} icon={<CheckCircle2 size={18} />} />
+        <MetricCard label="Strict Pass Rate" value={pct(summary?.pass_rate ?? 0)} helper={latestLabel} icon={<CheckCircle2 size={18} />} />
         <MetricCard label="Avg Latency" value={`${Math.round(summary?.avg_latency_ms ?? 0)} ms`} helper="Latest run average" icon={<Clock3 size={18} />} />
         <MetricCard label="Avg Cost" value={money(summary?.avg_cost_usd ?? 0)} helper="Per case estimate" icon={<WalletCards size={18} />} />
         <MetricCard label="Judge Kappa" value={(summary?.calibration?.pass_kappa ?? 0).toFixed(2)} helper={`${summary?.calibration?.sample_size ?? 0} labeled traces`} icon={<Scale size={18} />} />
         <MetricCard label="PII Recall" value={pct(summary?.pii_redaction?.recall ?? 0)} helper={`${summary?.pii_redaction?.redacted_entities ?? 0}/${summary?.pii_redaction?.expected_entities ?? 0} entities`} icon={<Fingerprint size={18} />} />
+      </section>
+
+      <section className="qualityPanel">
+        <div>
+          <span className="eyebrow">Score Breakdown</span>
+          <h2>Latest run quality signals</h2>
+        </div>
+        <div className="qualityGrid">
+          <QualitySignal label="Answer quality" value={summary?.score_breakdown?.semantic_quality ?? 0} helper="Semantic match or judge score" />
+          <QualitySignal label="Fact completeness" value={summary?.score_breakdown?.fact_completeness ?? 0} helper="Required facts included" />
+          <QualitySignal label="Tool accuracy" value={summary?.score_breakdown?.tool_accuracy ?? 0} helper="Action and arguments" />
+          <QualitySignal label="Grounding" value={summary?.score_breakdown?.grounding ?? 0} helper="Supported by context" />
+          <QualitySignal label="Retrieval" value={summary?.score_breakdown?.retrieval_quality ?? 0} helper="Expected facts retrieved" />
+        </div>
       </section>
 
       <section className="summaryWidget">

@@ -303,6 +303,74 @@ h2 {
   padding: 18px;
 }
 
+.qualityPanel {
+  background: #ffffff;
+  border: 1px solid #dfe6e1;
+  border-radius: 8px;
+  box-shadow: 0 14px 32px rgba(30, 45, 38, 0.07);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 280px minmax(0, 1fr);
+  margin: 0 auto 16px;
+  max-width: 1440px;
+  padding: 18px;
+}
+
+.qualityPanel h2 {
+  color: #25332e;
+  line-height: 1.35;
+}
+
+.qualityGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.qualitySignal {
+  background: #f7faf8;
+  border: 1px solid #dfe8e3;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.qualitySignal div:first-child {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+}
+
+.qualitySignal span {
+  color: #5d6b66;
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.qualitySignal b {
+  color: #1f6f5b;
+  font-size: 22px;
+}
+
+.qualitySignal em {
+  color: #66736f;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.signalTrack {
+  background: #e9eeeb;
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.signalTrack div {
+  background: #1f6f5b;
+  height: 100%;
+}
+
 .eyebrow {
   color: #1f6f5b;
   display: block;
@@ -654,8 +722,14 @@ label {
   line-height: 1;
 }
 
+.compareCard small {
+  color: #42514b;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .compareTable {
-  min-width: 980px;
+  min-width: 1180px;
 }
 
 .textButton {
@@ -695,8 +769,13 @@ label {
     grid-template-columns: 1fr;
   }
 
-  .summaryWidget {
+  .summaryWidget,
+  .qualityPanel {
     grid-template-columns: 1fr;
+  }
+
+  .qualityGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .compareCards {
@@ -719,6 +798,10 @@ label {
   }
 
   .compareCards {
+    grid-template-columns: 1fr;
+  }
+
+  .qualityGrid {
     grid-template-columns: 1fr;
   }
 

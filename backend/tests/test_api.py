@@ -32,8 +32,11 @@ def test_mock_run_and_summary() -> None:
     assert first_result["failure_mode"] == first_result["failure_type"]
     assert "failure_explanation" in first_result
     assert "trace" in first_result
+    assert "score_breakdown" in first_result
+    assert first_result["score_breakdown"]["semantic_quality"] >= 0
     assert "calibration" in summary_response.json()
     assert "pii_redaction" in summary_response.json()
+    assert "score_breakdown" in summary_response.json()
     assert set(first_result["matched_facts"]) == set(first_result["required_facts"])
     assert first_result["acceptable_actions"]
     assert summary_response.status_code == 200
@@ -120,6 +123,10 @@ def test_comparison_endpoint_returns_run_metrics() -> None:
     latest = runs[0]
     assert "avg_answer_match" in latest
     assert "avg_fact_recall" in latest
+    assert "strict_pass_rate" in latest
+    assert "score_breakdown" in latest
+    assert "avg_semantic_quality" in latest
+    assert "avg_tool_accuracy" in latest
     assert "failure_counts" in latest
 
 
@@ -134,6 +141,8 @@ def test_latest_run_summary_uses_request_provider() -> None:
     assert body["run_id"] == created.json()["id"]
     assert body["provider"] == "mock"
     assert "latest run covered" in body["summary"]
+    assert "Quality signals" in body["summary"]
+    assert "score_breakdown" in body["report"]
     assert body["report"]["cases"]
 
 
