@@ -208,3 +208,34 @@ def failure_counts(results: list[object]) -> dict[str, int]:
         if (getattr(result, "failure_mode", None) or result.failure_type) != "none"
     )
     return dict(counter)
+
+
+def score_breakdown(result: object) -> dict[str, float]:
+    tool_score = 1.0 if getattr(result, "tool_correct") else 0.0
+    action_score = float(getattr(result, "action_input_score"))
+    tool_accuracy = 1.0 if tool_score == 1.0 and action_score >= 0.12 else (tool_score * 0.7) + (action_score * 0.3)
+    judge_score = getattr(result, "judge_score", None)
+    semantic_quality = judge_score if judge_score is not None else getattr(result, "answer_match")
+    return {
+        "semantic_quality": round(float(semantic_quality), 3),
+        "fact_completeness": round(float(getattr(result, "fact_recall")), 3),
+        "tool_accuracy": round(tool_accuracy, 3),
+        "grounding": round((float(getattr(result, "groundedness")) * 0.6) + (float(getattr(result, "fact_precision")) * 0.4), 3),
+        "retrieval_quality": round(float(getattr(result, "retrieval_hit")), 3),
+    }
+
+
+def average_score_breakdown(results: list[object]) -> dict[str, float]:
+    if not results:
+        return {
+            "semantic_quality": 0.0,
+            "fact_completeness": 0.0,
+            "tool_accuracy": 0.0,
+            "grounding": 0.0,
+            "retrieval_quality": 0.0,
+        }
+    breakdowns = [score_breakdown(result) for result in results]
+    return {
+        key: round(sum(item[key] for item in breakdowns) / len(breakdowns), 3)
+        for key in breakdowns[0]
+    }

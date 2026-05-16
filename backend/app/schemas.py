@@ -73,6 +73,7 @@ class EvalResultOut(BaseModel):
     passed: bool
     retrieved_chunks: list[str]
     trace: dict[str, object]
+    score_breakdown: dict[str, float]
 
 
 class EvalRunOut(BaseModel):
@@ -104,5 +105,6 @@ class SummaryOut(BaseModel):
     avg_cost_usd: float
     failure_counts: dict[str, int]
     failed_cases: list[EvalResultOut]
+    score_breakdown: dict[str, float]
     calibration: dict[str, object]
     pii_redaction: dict[str, object]
