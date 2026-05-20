@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from sqlalchemy.orm import Session
 
-from backend.app.models import Document, EvalCase
+from backend.app.models import Document, EvalCase, EvalResult
 
 DATA_FILE = Path(__file__).resolve().parents[2] / "data" / "seed_cases.json"
 HUMAN_LABELS_FILE = Path(__file__).resolve().parents[2] / "data" / "human_judge_labels.json"
@@ -63,6 +63,65 @@ def seed_database(db: Session) -> None:
                 )
             )
     db.commit()
+
+
+def upsert_cases(
+    db: Session,
+    documents: list[dict[str, object]],
+    cases: list[dict[str, object]],
+    replace: bool = False,
+) -> tuple[int, int]:
+    if replace:
+        db.query(EvalResult).delete()
+        db.query(EvalCase).delete()
+        db.query(Document).delete()
+        db.flush()
+
+    known_doc_ids = {doc.id for doc in db.query(Document.id).all()} | {str(d["id"]) for d in documents}
+    for case in cases:
+        if str(case["document_id"]) not in known_doc_ids:
+            raise ValueError(f"Case {case['id']} references unknown document_id {case['document_id']}")
+
+    doc_count = 0
+    for item in documents:
+        document = db.get(Document, str(item["id"]))
+        if document:
+            document.name = str(item["name"])
+            document.category = str(item["category"])
+            document.text = str(item["text"])
+        else:
+            db.add(
+                Document(
+                    id=str(item["id"]),
+                    name=str(item["name"]),
+                    category=str(item["category"]),
+                    text=str(item["text"]),
+                )
+            )
+        doc_count += 1
+    db.flush()
+
+    case_count = 0
+    for item in cases:
+        values = {
+            "document_id": str(item["document_id"]),
+            "input": str(item["input"]),
+            "expected_answer": str(item["expected_answer"]),
+            "expected_facts_json": json.dumps(item["expected_facts"]),
+            "expected_action": str(item["expected_action"]),
+            "acceptable_actions_json": json.dumps(
+                item.get("acceptable_actions") or [item["expected_action"]]
+            ),
+        }
+        case = db.get(EvalCase, str(item["id"]))
+        if case:
+            for name, value in values.items():
+                setattr(case, name, value)
+        else:
+            db.add(EvalCase(id=str(item["id"]), **values))
+        case_count += 1
+    db.commit()
+    return doc_count, case_count
 
 
 def expected_facts(case: EvalCase) -> list[str]:

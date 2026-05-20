@@ -266,6 +266,74 @@ def test_webhook_agent_parses_response_via_stubbed_http(monkeypatch) -> None:
     assert any(key.lower() == "authorization" for key in captured["headers"])
 
 
+def test_upload_cases_endpoint_adds_user_golden_set() -> None:
+    payload = {
+        "documents": [
+            {
+                "id": "user_doc_1",
+                "name": "user_invoice.txt",
+                "category": "invoice",
+                "text": "Invoice INV-9000 from Acme Co. Total $1,200. PO present. Approve.",
+            }
+        ],
+        "cases": [
+            {
+                "id": "user_case_1",
+                "document_id": "user_doc_1",
+                "input": "Should this invoice be approved?",
+                "expected_answer": "Approve invoice INV-9000.",
+                "expected_facts": [
+                    {"text": "INV-9000", "required": True},
+                    {"text": "Acme Co", "required": False},
+                ],
+                "expected_action": "approve_invoice",
+                "acceptable_actions": ["approve_invoice", "request_more_info"],
+            }
+        ],
+    }
+    with TestClient(app) as client:
+        upload = client.post("/api/cases", json=payload)
+        cases = client.get("/api/cases").json()
+
+    assert upload.status_code == 200
+    body = upload.json()
+    assert body["documents_written"] == 1
+    assert body["cases_written"] == 1
+    assert body["replaced"] is False
+    ids = {case["id"] for case in cases}
+    assert "user_case_1" in ids
+
+
+def test_upload_cases_rejects_unknown_document_reference() -> None:
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/cases",
+            json={
+                "documents": [],
+                "cases": [
+                    {
+                        "id": "orphan_case",
+                        "document_id": "missing_doc",
+                        "input": "x",
+                        "expected_answer": "y",
+                        "expected_facts": ["z"],
+                        "expected_action": "noop",
+                    }
+                ],
+            },
+        )
+
+    assert response.status_code == 400
+    assert "missing_doc" in response.json()["detail"]
+
+
+def test_upload_cases_requires_at_least_one_case() -> None:
+    with TestClient(app) as client:
+        response = client.post("/api/cases", json={"documents": [], "cases": []})
+
+    assert response.status_code == 400
+
+
 def test_per_run_key_takes_precedence(monkeypatch) -> None:
     from backend.app.agents import AgentOutput
     import backend.app.runner as runner

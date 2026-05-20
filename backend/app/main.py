@@ -8,14 +8,14 @@ from sqlalchemy.orm import Session, joinedload
 
 from backend.app.config import get_settings
 from backend.app.database import Base, SessionLocal, engine, ensure_schema, get_db
-from backend.app.dataset import acceptable_actions, all_fact_texts, load_human_judge_labels, load_pii_samples, required_facts, seed_database, supporting_facts
+from backend.app.dataset import acceptable_actions, all_fact_texts, load_human_judge_labels, load_pii_samples, required_facts, seed_database, supporting_facts, upsert_cases
 from backend.app.evaluator import average_score_breakdown, fact_coverage, failure_counts, score_breakdown
 from backend.app.calibration import calibration_summary
 from backend.app.agents import AgentError, summarize_eval_report
-from backend.app.models import EvalCase, EvalResult, EvalRun
+from backend.app.models import Document, EvalCase, EvalResult, EvalRun
 from backend.app.pii import measure_recall
 from backend.app.runner import _effective_provider, _provider_api_key, _provider_model, run_evaluation
-from backend.app.schemas import EvalCaseOut, EvalResultOut, EvalRunDetail, EvalRunOut, EvalSummaryRequest, RunRequest, SummaryOut
+from backend.app.schemas import CaseUploadRequest, CaseUploadResponse, EvalCaseOut, EvalResultOut, EvalRunDetail, EvalRunOut, EvalSummaryRequest, RunRequest, SummaryOut
 
 settings = get_settings()
 app = FastAPI(title=settings.api_title)
@@ -102,6 +102,25 @@ def _result_out(result: EvalResult) -> EvalResultOut:
 def list_cases(db: Session = Depends(get_db)) -> list[EvalCaseOut]:
     cases = db.query(EvalCase).options(joinedload(EvalCase.document)).order_by(EvalCase.id).all()
     return [_case_out(case) for case in cases]
+
+
+@app.post("/api/cases", response_model=CaseUploadResponse)
+def upload_cases(request: CaseUploadRequest, db: Session = Depends(get_db)) -> CaseUploadResponse:
+    if not request.cases:
+        raise HTTPException(status_code=400, detail="At least one case is required")
+    payload_cases = [case.model_dump() for case in request.cases]
+    payload_docs = [doc.model_dump() for doc in request.documents]
+    try:
+        doc_count, case_count = upsert_cases(db, payload_docs, payload_cases, replace=request.replace)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return CaseUploadResponse(
+        documents_written=doc_count,
+        cases_written=case_count,
+        total_documents=db.query(Document).count(),
+        total_cases=db.query(EvalCase).count(),
+        replaced=request.replace,
+    )
 
 
 @app.post("/api/runs", response_model=EvalRunDetail)
