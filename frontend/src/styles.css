@@ -262,17 +262,37 @@ h2 {
   transform: translateY(0);
 }
 
-.error {
+.error,
+.runProgress {
   align-items: center;
-  background: #fff1ed;
-  border: 1px solid #ffc7ba;
   border-radius: 8px;
-  color: #8d321d;
   display: flex;
   gap: 8px;
   margin: 0 auto 18px;
   max-width: 1440px;
   padding: 12px 14px;
+}
+
+.error {
+  background: #fff1ed;
+  border: 1px solid #ffc7ba;
+  color: #8d321d;
+}
+
+.runProgress {
+  background: #eef6ff;
+  border: 1px solid #bbd7f3;
+  color: #24537a;
+}
+
+.runProgress svg {
+  animation: spin 1.1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .metricsGrid,

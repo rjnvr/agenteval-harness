@@ -80,6 +80,13 @@ uvicorn backend.app.main:app --reload
 
 The API will run at `http://localhost:8000`.
 
+Database migrations run automatically on API startup. For manual schema work, use Alembic:
+
+```bash
+alembic upgrade head
+alembic revision --autogenerate -m "describe change"
+```
+
 ## Frontend Setup
 
 ```bash
@@ -98,6 +105,16 @@ Mock provider is the default and works without credentials:
 curl -X POST http://localhost:8000/api/runs \
   -H "Content-Type: application/json" \
   -d '{"provider":"mock"}'
+```
+
+For long suites, request an async run and poll the status endpoint:
+
+```bash
+curl -X POST http://localhost:8000/api/runs \
+  -H "Content-Type: application/json" \
+  -d '{"provider":"mock","async_run":true}'
+
+curl http://localhost:8000/api/runs/1/status
 ```
 
 Live providers can be selected from the dashboard or requested from the API with `provider` set to `anthropic` or `openai`. You can pass `model`, optional `case_ids`, and `judge_enabled`. API keys are read in this order: per-run key from the dashboard or API request first, then the matching environment variable. Per-run keys are not stored in the database.
@@ -171,6 +188,7 @@ Environment variables used by live providers:
 - `POST /api/runs`: run all cases or selected case IDs with `provider=mock|anthropic|openai`
 - `GET /api/runs`: list recent eval runs
 - `GET /api/runs/{run_id}`: inspect one run and its case results
+- `GET /api/runs/{run_id}/status`: poll queued/running/completed/failed run status and partial results
 - `GET /api/summary`: latest dashboard summary
 
 ## Testing

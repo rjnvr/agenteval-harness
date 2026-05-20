@@ -344,6 +344,7 @@ function App() {
   const [webhookHeaders, setWebhookHeaders] = useState("");
   const [judgeEnabled, setJudgeEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [runProgress, setRunProgress] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [evalSummary, setEvalSummary] = useState<EvalSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -390,6 +391,7 @@ function App() {
 
   async function runEval() {
     setLoading(true);
+    setRunProgress(null);
     setError(null);
     try {
       if (provider === "webhook" && !webhookUrl.trim()) {
@@ -400,16 +402,26 @@ function App() {
         model: model.trim() || DEFAULT_MODELS[provider],
         api_key: provider === "mock" || provider === "webhook" || !apiKey.trim() ? undefined : apiKey.trim(),
         judge_enabled: provider === "webhook" ? false : judgeEnabled,
+        async_run: true,
         webhook_url: provider === "webhook" ? webhookUrl.trim() : undefined,
         webhook_headers: provider === "webhook" ? parseWebhookHeaders(webhookHeaders) : undefined,
       };
-      const detail = await api<RunDetail>("/api/runs", { method: "POST", body: JSON.stringify(payload) });
+      let detail = await api<RunDetail>("/api/runs", { method: "POST", body: JSON.stringify(payload) });
       setSelectedRun(detail);
+      setRunProgress(`Run ${detail.id} queued`);
+      while (detail.status === "queued" || detail.status === "running") {
+        await new Promise((resolve) => window.setTimeout(resolve, 900));
+        detail = await api<RunDetail>(`/api/runs/${detail.id}/status`);
+        setSelectedRun(detail);
+        setRunProgress(`Run ${detail.id} ${detail.status} - ${detail.results.length}/${detail.total_cases} cases`);
+      }
+      if (detail.status === "failed") throw new Error(`Run ${detail.id} failed.`);
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Run failed");
     } finally {
       setLoading(false);
+      setRunProgress(null);
     }
   }
 
@@ -505,6 +517,7 @@ function App() {
       </header>
 
       {error && <div className="error"><AlertTriangle size={16} />{error}</div>}
+      {runProgress && <div className="runProgress"><RefreshCw size={16} />{runProgress}</div>}
 
       <section className="metricsGrid">
         <MetricCard label="Tests Run" value={String(summary?.total_tests_run ?? 0)} helper={`${summary?.total_runs ?? 0} total runs`} icon={<Target size={18} />} />

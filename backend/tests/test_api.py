@@ -63,6 +63,20 @@ def test_selected_cases_are_supported() -> None:
     assert {result["case_id"] for result in body["results"]} == {"case_001", "case_002"}
 
 
+def test_async_run_can_be_polled_for_status() -> None:
+    with TestClient(app) as client:
+        created = client.post("/api/runs", json={"provider": "mock", "case_ids": ["case_001"], "async_run": True})
+        status = client.get(f"/api/runs/{created.json()['id']}/status")
+
+    assert created.status_code == 200
+    assert status.status_code == 200
+    body = status.json()
+    assert body["status"] in {"queued", "running", "completed"}
+    assert body["total_cases"] == 1
+    if body["status"] == "completed":
+        assert len(body["results"]) == 1
+
+
 def test_openai_missing_key_returns_agent_error() -> None:
     with TestClient(app) as client:
         response = client.post("/api/runs", json={"provider": "openai", "case_ids": ["case_001"]})

@@ -28,6 +28,7 @@ class RunRequest(BaseModel):
     case_ids: list[str] | None = None
     api_key: str | None = Field(default=None, repr=False)
     judge_enabled: bool = False
+    async_run: bool = False
     mode: str | None = None
     webhook_url: str | None = None
     webhook_headers: dict[str, str] | None = Field(default=None, repr=False)

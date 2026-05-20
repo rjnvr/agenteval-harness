@@ -1,20 +1,20 @@
 import json
 from pathlib import Path
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, joinedload
 
 from backend.app.config import get_settings
-from backend.app.database import Base, SessionLocal, engine, ensure_schema, get_db
+from backend.app.database import SessionLocal, get_db, run_migrations
 from backend.app.dataset import acceptable_actions, all_fact_texts, load_human_judge_labels, load_pii_samples, required_facts, seed_database, supporting_facts, upsert_cases
 from backend.app.evaluator import average_score_breakdown, fact_coverage, failure_counts, score_breakdown
 from backend.app.calibration import calibration_summary
 from backend.app.agents import AgentError, summarize_eval_report
 from backend.app.models import Document, EvalCase, EvalResult, EvalRun
 from backend.app.pii import measure_recall
-from backend.app.runner import _effective_provider, _provider_api_key, _provider_model, run_evaluation
+from backend.app.runner import _effective_provider, _provider_api_key, _provider_model, create_eval_run, execute_eval_run, fail_eval_run, run_evaluation
 from backend.app.schemas import CaseUploadRequest, CaseUploadResponse, EvalCaseOut, EvalResultOut, EvalRunDetail, EvalRunOut, EvalSummaryRequest, RunRequest, SummaryOut
 
 settings = get_settings()
@@ -36,8 +36,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup() -> None:
-    Base.metadata.create_all(bind=engine)
-    ensure_schema()
+    run_migrations()
     with SessionLocal() as db:
         seed_database(db)
 
@@ -123,10 +122,23 @@ def upload_cases(request: CaseUploadRequest, db: Session = Depends(get_db)) -> C
     )
 
 
+def _execute_run_in_background(run_id: int, request: RunRequest) -> None:
+    with SessionLocal() as db:
+        try:
+            execute_eval_run(db, run_id, request)
+        except Exception:
+            fail_eval_run(db, run_id)
+            raise
+
+
 @app.post("/api/runs", response_model=EvalRunDetail)
-def create_run(request: RunRequest, db: Session = Depends(get_db)) -> EvalRunDetail:
+def create_run(request: RunRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)) -> EvalRunDetail:
     try:
-        run = run_evaluation(db, request)
+        if request.async_run:
+            run = create_eval_run(db, request, status="queued")
+            background_tasks.add_task(_execute_run_in_background, run.id, request)
+        else:
+            run = run_evaluation(db, request)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return get_run(run.id, db)
@@ -161,6 +173,11 @@ def get_run(run_id: int, db: Session = Depends(get_db)) -> EvalRunDetail:
         created_at=run.created_at,
         results=sorted((_result_out(result) for result in run.results), key=lambda result: result.case_id),
     )
+
+
+@app.get("/api/runs/{run_id}/status", response_model=EvalRunDetail)
+def get_run_status(run_id: int, db: Session = Depends(get_db)) -> EvalRunDetail:
+    return get_run(run_id, db)
 
 
 @app.get("/api/comparison")
