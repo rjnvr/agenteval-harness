@@ -33,6 +33,42 @@ class RunRequest(BaseModel):
     webhook_headers: dict[str, str] | None = Field(default=None, repr=False)
 
 
+class CaseUploadDocument(BaseModel):
+    id: str
+    name: str
+    category: str
+    text: str
+
+
+class CaseUploadFact(BaseModel):
+    text: str
+    required: bool = True
+
+
+class CaseUploadCase(BaseModel):
+    id: str
+    document_id: str
+    input: str
+    expected_answer: str
+    expected_facts: list[str | CaseUploadFact]
+    expected_action: str
+    acceptable_actions: list[str] | None = None
+
+
+class CaseUploadRequest(BaseModel):
+    documents: list[CaseUploadDocument] = Field(default_factory=list)
+    cases: list[CaseUploadCase]
+    replace: bool = False
+
+
+class CaseUploadResponse(BaseModel):
+    documents_written: int
+    cases_written: int
+    total_documents: int
+    total_cases: int
+    replaced: bool
+
+
 class EvalSummaryRequest(BaseModel):
     provider: str = "mock"
     model: str | None = None
