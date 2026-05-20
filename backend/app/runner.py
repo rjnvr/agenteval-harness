@@ -11,6 +11,7 @@ from backend.app.agents import (
     run_mock_agent,
     run_openai_agent,
     run_openrouter_agent,
+    run_webhook_agent,
 )
 from backend.app.config import get_settings
 from backend.app.dataset import acceptable_actions, all_fact_texts, expected_facts, required_facts, supporting_facts
@@ -18,7 +19,7 @@ from backend.app.models import EvalCase, EvalResult, EvalRun
 from backend.app.pii import redact_value
 from backend.app.schemas import RunRequest
 
-PROVIDERS = {"mock", "anthropic", "openai", "google", "openrouter"}
+PROVIDERS = {"mock", "anthropic", "openai", "google", "openrouter", "webhook"}
 
 
 def _error_output(message: str) -> AgentOutput:
@@ -45,6 +46,8 @@ def _effective_provider(request: RunRequest | str) -> str:
         provider = "google"
     if provider in {"llama", "meta", "meta_llama"}:
         provider = "openrouter"
+    if provider in {"byo", "custom", "http"}:
+        provider = "webhook"
     return provider
 
 
@@ -60,6 +63,8 @@ def _provider_model(provider: str, requested_model: str | None) -> str:
         return settings.google_model
     if provider == "openrouter":
         return settings.openrouter_model
+    if provider == "webhook":
+        return "byo-agent-webhook"
     return "mock-deterministic"
 
 
@@ -80,15 +85,21 @@ def run_evaluation(
         requested_model = None
         per_run_key = None
         judge_enabled = False
+        webhook_url: str | None = None
+        webhook_headers: dict[str, str] | None = None
     else:
         provider = _effective_provider(request)
         selected_case_ids = request.case_ids
         requested_model = request.model
         per_run_key = request.api_key
         judge_enabled = request.judge_enabled
+        webhook_url = request.webhook_url
+        webhook_headers = request.webhook_headers
 
     if provider not in PROVIDERS:
-        raise ValueError("provider must be 'mock', 'anthropic', 'openai', 'google', or 'openrouter'")
+        raise ValueError("provider must be 'mock', 'anthropic', 'openai', 'google', 'openrouter', or 'webhook'")
+    if provider == "webhook" and not (webhook_url and webhook_url.strip()):
+        raise ValueError("webhook provider requires webhook_url")
 
     model = _provider_model(provider, requested_model)
     api_key = _provider_api_key(provider, per_run_key)
@@ -123,8 +134,10 @@ def run_evaluation(
                 output = run_openai_agent(case, case.document.text, model, api_key)
             elif provider == "google":
                 output = run_google_agent(case, case.document.text, model, api_key)
-            else:
+            elif provider == "openrouter":
                 output = run_openrouter_agent(case, case.document.text, model, api_key)
+            else:
+                output = run_webhook_agent(case, case.document.text, webhook_url or "", webhook_headers)
         except (AgentError, json.JSONDecodeError, ValueError) as exc:
             output = _error_output(str(exc))
             agent_failed = True
@@ -140,7 +153,7 @@ def run_evaluation(
         groundedness = evaluator.groundedness(output.answer, output.retrieved_chunks)
         unsupported = evaluator.unsupported_claims(output.answer, case.document.text)
         judge_score = None
-        if judge_enabled and not agent_failed:
+        if judge_enabled and not agent_failed and provider != "webhook":
             try:
                 judge_score = judge_answer(provider, model, api_key, case.input, case.expected_answer, output.answer)
             except (AgentError, json.JSONDecodeError, ValueError):

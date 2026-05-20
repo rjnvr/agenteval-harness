@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock3, Fingerprint, GitCompare, Info, KeyRound, Play, RefreshCw, Scale, Sparkles, Target, WalletCards } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock3, Fingerprint, GitCompare, Info, KeyRound, Link as LinkIcon, Play, RefreshCw, Scale, Sparkles, Target, WalletCards } from "lucide-react";
 import "./styles.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.PROD ? "" : "http://localhost:8000");
 
-type Provider = "mock" | "anthropic" | "openai" | "google" | "openrouter";
+type Provider = "mock" | "anthropic" | "openai" | "google" | "openrouter" | "webhook";
 
 type EvalRun = {
   id: number;
@@ -118,6 +118,7 @@ const DEFAULT_MODELS: Record<Provider, string> = {
   openai: "gpt-4o-mini",
   google: "gemini-2.5-flash",
   openrouter: "meta-llama/llama-3.3-70b-instruct",
+  webhook: "byo-agent-webhook",
 };
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -145,6 +146,7 @@ function providerLabel(provider: string) {
   if (provider === "openai") return "OpenAI";
   if (provider === "google") return "Gemini";
   if (provider === "openrouter") return "OpenRouter";
+  if (provider === "webhook") return "BYO Agent";
   return "Mock";
 }
 
@@ -338,6 +340,8 @@ function App() {
   const [provider, setProvider] = useState<Provider>("mock");
   const [model, setModel] = useState(DEFAULT_MODELS.mock);
   const [apiKey, setApiKey] = useState("");
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookHeaders, setWebhookHeaders] = useState("");
   const [judgeEnabled, setJudgeEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -358,15 +362,46 @@ function App() {
     if (nextSummary.latest_run) setSelectedRun(await api<RunDetail>(`/api/runs/${nextSummary.latest_run.id}`));
   }
 
+  function parseWebhookHeaders(raw: string): Record<string, string> | undefined {
+    const trimmed = raw.trim();
+    if (!trimmed) return undefined;
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const out: Record<string, string> = {};
+        for (const [key, value] of Object.entries(parsed)) {
+          if (typeof value === "string") out[key] = value;
+        }
+        return Object.keys(out).length ? out : undefined;
+      }
+    } catch {
+      const out: Record<string, string> = {};
+      for (const line of trimmed.split(/\r?\n/)) {
+        const idx = line.indexOf(":");
+        if (idx === -1) continue;
+        const key = line.slice(0, idx).trim();
+        const value = line.slice(idx + 1).trim();
+        if (key) out[key] = value;
+      }
+      return Object.keys(out).length ? out : undefined;
+    }
+    return undefined;
+  }
+
   async function runEval() {
     setLoading(true);
     setError(null);
     try {
+      if (provider === "webhook" && !webhookUrl.trim()) {
+        throw new Error("Enter a webhook URL for your agent.");
+      }
       const payload = {
         provider,
         model: model.trim() || DEFAULT_MODELS[provider],
-        api_key: provider === "mock" || !apiKey.trim() ? undefined : apiKey.trim(),
-        judge_enabled: judgeEnabled,
+        api_key: provider === "mock" || provider === "webhook" || !apiKey.trim() ? undefined : apiKey.trim(),
+        judge_enabled: provider === "webhook" ? false : judgeEnabled,
+        webhook_url: provider === "webhook" ? webhookUrl.trim() : undefined,
+        webhook_headers: provider === "webhook" ? parseWebhookHeaders(webhookHeaders) : undefined,
       };
       const detail = await api<RunDetail>("/api/runs", { method: "POST", body: JSON.stringify(payload) });
       setSelectedRun(detail);
@@ -418,13 +453,38 @@ function App() {
             <button className={provider === "openai" ? "active" : ""} onClick={() => selectProvider("openai")}>OpenAI</button>
             <button className={provider === "google" ? "active" : ""} onClick={() => selectProvider("google")}>Gemini</button>
             <button className={provider === "openrouter" ? "active" : ""} onClick={() => selectProvider("openrouter")}>Llama</button>
+            <button className={provider === "webhook" ? "active" : ""} onClick={() => selectProvider("webhook")}>BYO Agent</button>
           </div>
           <input className="modelInput" value={model} onChange={(event) => setModel(event.target.value)} aria-label="Model name" />
-          {provider !== "mock" && (
+          {provider !== "mock" && provider !== "webhook" && (
             <label className="keyField">
               <KeyRound size={15} />
               <input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={`${providerLabel(provider)} API key for this run`} aria-label="API key for this run" />
             </label>
+          )}
+          {provider === "webhook" && (
+            <>
+              <label className="keyField">
+                <LinkIcon size={15} />
+                <input
+                  type="url"
+                  value={webhookUrl}
+                  onChange={(event) => setWebhookUrl(event.target.value)}
+                  placeholder="https://your-agent.example.com/run"
+                  aria-label="Webhook URL for your agent"
+                />
+              </label>
+              <label className="keyField" title='Optional: JSON object or "Header: value" lines'>
+                <KeyRound size={15} />
+                <input
+                  type="text"
+                  value={webhookHeaders}
+                  onChange={(event) => setWebhookHeaders(event.target.value)}
+                  placeholder='Headers (optional) e.g. {"Authorization":"Bearer ..."}'
+                  aria-label="Webhook headers"
+                />
+              </label>
+            </>
           )}
           <div className={`judgeControl ${judgeEnabled ? "active" : ""}`}>
             <label className="judgeToggle">
