@@ -154,6 +154,118 @@ def test_legacy_mode_shape_still_works() -> None:
     assert response.json()["provider"] == "mock"
 
 
+def test_webhook_provider_requires_url() -> None:
+    with TestClient(app) as client:
+        response = client.post("/api/runs", json={"provider": "webhook", "case_ids": ["case_001"]})
+
+    assert response.status_code == 400
+    assert "webhook_url" in response.json()["detail"]
+
+
+def test_webhook_provider_calls_user_endpoint(monkeypatch) -> None:
+    from backend.app.agents import AgentOutput
+    import backend.app.runner as runner
+
+    seen = {}
+
+    def fake_webhook_agent(case, document_text, webhook_url, webhook_headers):
+        seen["url"] = webhook_url
+        seen["headers"] = webhook_headers
+        seen["case_id"] = case.id
+        facts = ["missing photos", "late submission"]
+        return AgentOutput(
+            answer=f"{case.expected_answer} Key facts: {', '.join(facts)}.",
+            action=case.expected_action,
+            action_input=", ".join(facts),
+            retrieved_chunks=[document_text[:200]],
+            latency_ms=42,
+            cost_usd=0.0021,
+        )
+
+    monkeypatch.setattr(runner, "run_webhook_agent", fake_webhook_agent)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/runs",
+            json={
+                "provider": "webhook",
+                "case_ids": ["case_001"],
+                "webhook_url": "https://example.com/agent",
+                "webhook_headers": {"Authorization": "Bearer abc"},
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["provider"] == "webhook"
+    assert body["model"] == "byo-agent-webhook"
+    assert seen["url"] == "https://example.com/agent"
+    assert seen["headers"] == {"Authorization": "Bearer abc"}
+    assert seen["case_id"] == "case_001"
+    assert body["results"][0]["cost_usd"] == 0.0021
+
+
+def test_webhook_agent_parses_response_via_stubbed_http(monkeypatch) -> None:
+    import io
+    import json as _json
+    from types import SimpleNamespace
+    import backend.app.agents as agents_module
+
+    case = SimpleNamespace(
+        id="case_test",
+        input="Should the invoice be approved?",
+        expected_answer="Approve the invoice with note.",
+        expected_action="approve_invoice",
+        document=SimpleNamespace(id="doc_test", name="Invoice", category="finance"),
+    )
+    document_text = "Invoice INV-001 total $500 approved by manager."
+
+    captured = {}
+
+    class FakeResponse:
+        def __init__(self, payload: bytes):
+            self._buffer = io.BytesIO(payload)
+
+        def read(self, size: int = -1) -> bytes:
+            return self._buffer.read(size)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def fake_urlopen(request, timeout=None):
+        captured["url"] = request.full_url
+        captured["timeout"] = timeout
+        captured["headers"] = dict(request.header_items())
+        captured["body"] = _json.loads(request.data.decode("utf-8"))
+        response_payload = {
+            "answer": case.expected_answer,
+            "action": case.expected_action,
+            "action_input": "covered",
+            "retrieved_chunks": ["chunk-from-webhook"],
+            "cost_usd": 0.0007,
+        }
+        return FakeResponse(_json.dumps(response_payload).encode("utf-8"))
+
+    monkeypatch.setattr(agents_module.urllib.request, "urlopen", fake_urlopen)
+    output = agents_module.run_webhook_agent(
+        case,
+        document_text,
+        "https://agent.example.com/run",
+        {"Authorization": "Bearer xyz"},
+    )
+
+    assert output.answer == case.expected_answer
+    assert output.action == case.expected_action
+    assert output.retrieved_chunks == ["chunk-from-webhook"]
+    assert output.cost_usd == 0.0007
+    assert captured["url"] == "https://agent.example.com/run"
+    assert captured["body"]["case_id"] == case.id
+    assert captured["body"]["question"] == case.input
+    assert any(key.lower() == "authorization" for key in captured["headers"])
+
+
 def test_per_run_key_takes_precedence(monkeypatch) -> None:
     from backend.app.agents import AgentOutput
     import backend.app.runner as runner

@@ -1,10 +1,15 @@
 import json
 import time
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from typing import Any
 
 from backend.app.rag import retrieve_chunks
 from backend.app.tools import SUPPORTED_ACTIONS
+
+WEBHOOK_TIMEOUT_SECONDS = 30.0
+WEBHOOK_MAX_RESPONSE_BYTES = 1_000_000
 
 
 @dataclass
@@ -253,6 +258,84 @@ def run_openrouter_agent(case: Any, document_text: str, model: str, api_key: str
         retrieved_chunks=chunks,
         latency_ms=max(int((time.perf_counter() - started) * 1000), 1),
         cost_usd=0.0 if not (input_tokens or output_tokens) else estimate_openai_cost(model, input_tokens, output_tokens),
+    )
+
+
+def run_webhook_agent(
+    case: Any,
+    document_text: str,
+    webhook_url: str,
+    webhook_headers: dict[str, str] | None,
+) -> AgentOutput:
+    if not webhook_url or not webhook_url.strip():
+        raise AgentError("Webhook provider requires a webhook_url.")
+    parsed_url = webhook_url.strip()
+    if not (parsed_url.startswith("http://") or parsed_url.startswith("https://")):
+        raise AgentError("webhook_url must start with http:// or https://.")
+
+    started = time.perf_counter()
+    chunks = retrieve_chunks(document_text, case.input)
+    payload = {
+        "case_id": case.id,
+        "question": case.input,
+        "allowed_actions": sorted(SUPPORTED_ACTIONS),
+        "document": {
+            "id": case.document.id,
+            "name": case.document.name,
+            "category": case.document.category,
+            "text": document_text,
+        },
+        "retrieved_chunks": chunks,
+    }
+    body = json.dumps(payload).encode("utf-8")
+    headers = {"Content-Type": "application/json", "User-Agent": "AgentEval-Harness/1.0"}
+    for key, value in (webhook_headers or {}).items():
+        if not isinstance(key, str) or not isinstance(value, str):
+            continue
+        if key.strip():
+            headers[key.strip()] = value
+    request = urllib.request.Request(parsed_url, data=body, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(request, timeout=WEBHOOK_TIMEOUT_SECONDS) as response:
+            raw_bytes = response.read(WEBHOOK_MAX_RESPONSE_BYTES + 1)
+    except urllib.error.HTTPError as exc:
+        raise AgentError(f"Webhook returned HTTP {exc.code}: {exc.reason}") from exc
+    except urllib.error.URLError as exc:
+        raise AgentError(f"Webhook request failed: {exc.reason}") from exc
+    except TimeoutError as exc:
+        raise AgentError(f"Webhook request timed out after {WEBHOOK_TIMEOUT_SECONDS:.0f}s.") from exc
+    if len(raw_bytes) > WEBHOOK_MAX_RESPONSE_BYTES:
+        raise AgentError("Webhook response exceeded 1MB size limit.")
+    try:
+        decoded = raw_bytes.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise AgentError("Webhook response was not valid UTF-8.") from exc
+    parsed = _parse_agent_json(decoded)
+    try:
+        body_json = json.loads(_strip_code_fence(decoded))
+    except json.JSONDecodeError as exc:
+        raise AgentError(f"Webhook response was not valid JSON: {exc}") from exc
+
+    returned_chunks_raw = body_json.get("retrieved_chunks")
+    if isinstance(returned_chunks_raw, list):
+        returned_chunks = [str(item) for item in returned_chunks_raw if isinstance(item, (str, int, float))]
+    else:
+        returned_chunks = chunks
+
+    cost_raw = body_json.get("cost_usd", 0)
+    try:
+        cost_usd = float(cost_raw)
+    except (TypeError, ValueError):
+        cost_usd = 0.0
+    cost_usd = max(cost_usd, 0.0)
+
+    return AgentOutput(
+        answer=parsed["answer"],
+        action=parsed["action"],
+        action_input=parsed["action_input"],
+        retrieved_chunks=returned_chunks,
+        latency_ms=max(int((time.perf_counter() - started) * 1000), 1),
+        cost_usd=round(cost_usd, 6),
     )
 
 

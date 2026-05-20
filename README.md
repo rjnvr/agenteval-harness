@@ -102,6 +102,63 @@ curl -X POST http://localhost:8000/api/runs \
 
 Live providers can be selected from the dashboard or requested from the API with `provider` set to `anthropic` or `openai`. You can pass `model`, optional `case_ids`, and `judge_enabled`. API keys are read in this order: per-run key from the dashboard or API request first, then the matching environment variable. Per-run keys are not stored in the database.
 
+## Bring Your Own Agent (Webhook)
+
+External teams can score their own agent against the same harness without changing this codebase. Set `provider` to `webhook` and pass a `webhook_url` (and optional `webhook_headers` for auth). The harness POSTs each case to your endpoint and applies the same scoring pipeline to the response.
+
+```bash
+curl -X POST http://localhost:8000/api/runs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "webhook",
+    "webhook_url": "https://your-agent.example.com/run",
+    "webhook_headers": {"Authorization": "Bearer YOUR_TOKEN"},
+    "case_ids": ["case_001", "case_002"]
+  }'
+```
+
+The dashboard exposes the same option under the **BYO Agent** provider tab. Headers can be entered as a JSON object or as `Header: value` lines.
+
+### Webhook request contract
+
+Each case results in one `POST` to `webhook_url` with `Content-Type: application/json` and any headers you supplied:
+
+```json
+{
+  "case_id": "case_001",
+  "question": "Should the warranty claim be approved?",
+  "allowed_actions": ["approve_invoice", "create_task", "escalate_compliance_review", "flag_cost_risk", "flag_risk", "request_more_info"],
+  "document": {
+    "id": "doc_001",
+    "name": "Warranty Claim - Order 8821",
+    "category": "support",
+    "text": "Full document text the agent should reason over..."
+  },
+  "retrieved_chunks": ["chunks retrieved by the harness as a hint - optional to use"]
+}
+```
+
+### Webhook response contract
+
+Respond within 30 seconds (max 1MB) with strict JSON:
+
+```json
+{
+  "answer": "Plain-text answer for the user, grounded in the document.",
+  "action": "request_more_info",
+  "action_input": "missing receipts and serial number",
+  "retrieved_chunks": ["any chunks your agent actually used - optional"],
+  "cost_usd": 0.0021
+}
+```
+
+- `answer`, `action`, and `action_input` are required.
+- `action` must be one of `allowed_actions`. Otherwise the case is recorded as `agent_error`.
+- `retrieved_chunks` is optional; if omitted the harness uses the chunks it sent you, so grounding/retrieval metrics still work.
+- `cost_usd` is optional and only used for the cost display.
+
+Non-2xx responses, timeouts, or invalid JSON are scored as `agent_error` for that case so a single broken endpoint does not abort the run. The webhook URL and headers are sent per request and are never persisted.
+
 Environment variables used by live providers:
 
 - `ANTHROPIC_API_KEY`
