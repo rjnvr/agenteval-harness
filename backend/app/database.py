@@ -1,4 +1,8 @@
 from collections.abc import Generator
+from pathlib import Path
+
+from alembic import command
+from alembic.config import Config
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -40,6 +44,25 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
+def _alembic_config() -> Config:
+    root = Path(__file__).resolve().parents[2]
+    return Config(str(root / "alembic.ini"))
+
+
+def run_migrations() -> None:
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    has_legacy_schema = bool({"documents", "eval_cases", "eval_runs", "eval_results"} & tables)
+    has_version_table = "alembic_version" in tables
+    config = _alembic_config()
+
+    if has_legacy_schema and not has_version_table:
+        ensure_schema()
+        command.stamp(config, "head")
+        return
+
+    command.upgrade(config, "head")
+
 
 def ensure_schema() -> None:
     inspector = inspect(engine)
@@ -49,6 +72,7 @@ def ensure_schema() -> None:
             "provider": "VARCHAR DEFAULT 'mock' NOT NULL",
             "model": "VARCHAR DEFAULT 'mock-deterministic' NOT NULL",
             "judge_enabled": "BOOLEAN DEFAULT false NOT NULL",
+            "status": "VARCHAR DEFAULT 'completed' NOT NULL",
         }
         with engine.begin() as conn:
             for name, ddl in run_columns.items():

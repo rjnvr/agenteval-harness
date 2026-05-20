@@ -74,27 +74,14 @@ def _provider_api_key(provider: str, per_run_key: str | None) -> str | None:
     return per_run_key.strip() if per_run_key and per_run_key.strip() else None
 
 
-def run_evaluation(
+def create_eval_run(
     db: Session,
     request: RunRequest | str,
     case_ids: list[str] | None = None,
+    *,
+    status: str = "running",
 ) -> EvalRun:
-    if isinstance(request, str):
-        provider = _effective_provider(request)
-        selected_case_ids = case_ids
-        requested_model = None
-        per_run_key = None
-        judge_enabled = False
-        webhook_url: str | None = None
-        webhook_headers: dict[str, str] | None = None
-    else:
-        provider = _effective_provider(request)
-        selected_case_ids = request.case_ids
-        requested_model = request.model
-        per_run_key = request.api_key
-        judge_enabled = request.judge_enabled
-        webhook_url = request.webhook_url
-        webhook_headers = request.webhook_headers
+    provider, selected_case_ids, requested_model, _per_run_key, judge_enabled, webhook_url, _webhook_headers = _run_options(request, case_ids)
 
     if provider not in PROVIDERS:
         raise ValueError("provider must be 'mock', 'anthropic', 'openai', 'google', 'openrouter', or 'webhook'")
@@ -102,7 +89,6 @@ def run_evaluation(
         raise ValueError("webhook provider requires webhook_url")
 
     model = _provider_model(provider, requested_model)
-    api_key = _provider_api_key(provider, per_run_key)
     query = db.query(EvalCase).options(joinedload(EvalCase.document)).order_by(EvalCase.id)
     if selected_case_ids:
         query = query.filter(EvalCase.id.in_(selected_case_ids))
@@ -113,11 +99,49 @@ def run_evaluation(
         provider=provider,
         model=model,
         judge_enabled=judge_enabled,
-        status="completed",
+        status=status,
         total_cases=len(cases),
     )
     db.add(run)
     db.flush()
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+def _run_options(
+    request: RunRequest | str,
+    case_ids: list[str] | None = None,
+) -> tuple[str, list[str] | None, str | None, str | None, bool, str | None, dict[str, str] | None]:
+    if isinstance(request, str):
+        return _effective_provider(request), case_ids, None, None, False, None, None
+    return (
+        _effective_provider(request),
+        request.case_ids,
+        request.model,
+        request.api_key,
+        request.judge_enabled,
+        request.webhook_url,
+        request.webhook_headers,
+    )
+
+
+def execute_eval_run(db: Session, run_id: int, request: RunRequest | str, case_ids: list[str] | None = None) -> EvalRun:
+    provider, selected_case_ids, requested_model, per_run_key, judge_enabled, webhook_url, webhook_headers = _run_options(request, case_ids)
+    model = _provider_model(provider, requested_model)
+    api_key = _provider_api_key(provider, per_run_key)
+    query = db.query(EvalCase).options(joinedload(EvalCase.document)).order_by(EvalCase.id)
+    if selected_case_ids:
+        query = query.filter(EvalCase.id.in_(selected_case_ids))
+    cases = query.all()
+
+    run = db.query(EvalRun).filter(EvalRun.id == run_id).first()
+    if not run:
+        raise ValueError("Run not found")
+
+    run.status = "running"
+    run.total_cases = len(cases)
+    db.commit()
 
     for case in cases:
         facts = required_facts(case)
@@ -242,6 +266,13 @@ def run_evaluation(
                 trace_json=json.dumps(trace),
             )
         )
+        db.flush()
+        results = list(run.results)
+        run.total_cases = len(cases)
+        run.pass_rate = round(sum(1 for result in results if result.passed) / max(len(results), 1), 3)
+        run.avg_latency_ms = round(sum(result.latency_ms for result in results) / max(len(results), 1), 2)
+        run.avg_cost_usd = round(sum(result.cost_usd for result in results) / max(len(results), 1), 6)
+        db.commit()
 
     db.flush()
     results = list(run.results)
@@ -249,6 +280,24 @@ def run_evaluation(
     run.pass_rate = round(sum(1 for result in results if result.passed) / max(len(results), 1), 3)
     run.avg_latency_ms = round(sum(result.latency_ms for result in results) / max(len(results), 1), 2)
     run.avg_cost_usd = round(sum(result.cost_usd for result in results) / max(len(results), 1), 6)
+    run.status = "completed"
     db.commit()
     db.refresh(run)
     return run
+
+
+def fail_eval_run(db: Session, run_id: int) -> None:
+    run = db.query(EvalRun).filter(EvalRun.id == run_id).first()
+    if not run:
+        return
+    run.status = "failed"
+    db.commit()
+
+
+def run_evaluation(
+    db: Session,
+    request: RunRequest | str,
+    case_ids: list[str] | None = None,
+) -> EvalRun:
+    run = create_eval_run(db, request, case_ids, status="running")
+    return execute_eval_run(db, run.id, request, case_ids)
