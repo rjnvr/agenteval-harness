@@ -14,16 +14,19 @@ New to evals? Read the [beginner evaluation guide](docs/evaluation-guide.md) for
 
 ## What It Measures
 
-- Answer correctness against expected answers and facts
-- Fact recall and fact precision
-- Tool/action correctness
-- Action input correctness
-- Retrieval hit rate and groundedness against retrieved chunks
-- JSON schema validity
-- Optional LLM judge score for semantic grading
-- Hallucination signals, latency, estimated cost, and failure reason
+The scoring pipeline is inspired by [RAGAS](https://docs.ragas.io/) and adapted for tool-using agents. Every case is scored on five orthogonal reliability axes so regressions have a *named* root cause instead of a single opaque pass/fail:
 
-For plain-English definitions of every metric, see the [evaluation guide](docs/evaluation-guide.md#metric-reference).
+| Axis | Metric (code) | RAGAS analogue | What it catches |
+| --- | --- | --- | --- |
+| **Faithfulness / Grounding** | `groundedness`, `hallucination_score`, `fact_precision` | Faithfulness | Claims, entities, or dollar amounts in the answer that aren't supported by the retrieved context. Money mismatches auto-flag as `fabricated_tool_output`. |
+| **Answer Relevance** | `answer_match` (`score_answer`), optional `judge_score` | Answer Relevance | Semantic overlap with the expected answer; optional LLM-judge upgrade. |
+| **Context Recall** | `retrieval_hit` | Context Recall | Whether the retrieved chunks actually contain the expected facts — isolates retrieval failures from generation failures. |
+| **Fact Completeness** | `fact_recall`, `fact_coverage` | Answer Correctness (recall side) | Coverage of expected key facts in the final answer. |
+| **Tool Accuracy** | `tool_correct`, `action_input_score` | (agent-specific extension) | Tool-selection correctness + argument quality; separates `wrong_tool` from `right_tool_wrong_args`. |
+
+Plus: JSON `schema_valid`, latency, estimated cost, and a 10-mode failure taxonomy (`wrong_tool`, `right_tool_wrong_args`, `premature_stop`, `unsupported_claim`, `fabricated_tool_output`, `missed_key_fact`, `retrieval_miss`, `schema_invalid`, `low_answer_quality`, `agent_error`) so every regression maps to a specific failure category.
+
+For plain-English definitions of every metric, see the [evaluation guide](docs/evaluation-guide.md#metric-reference). The scoring source is [`backend/app/evaluator.py`](backend/app/evaluator.py).
 
 ## How Evaluation Works
 
@@ -57,8 +60,9 @@ For example, a Claude run may retrieve the right document context and answer the
 
 ## Resume Bullets
 
-- Built an agent evaluation harness to test document-based AI workflows across 20+ cases, measuring answer accuracy, tool-use correctness, latency, cost, and failure modes.
-- Designed an agent eval system with test cases, scoring logic, failure-mode analysis, and dashboarding to improve reliability of RAG + tool-using AI workflows.
+- Built a RAGAS-inspired evaluation harness for RAG + tool-using AI agents, scoring 20+ golden cases across five reliability axes — **Faithfulness**, **Answer Relevance**, **Context Recall**, **Fact Completeness**, and **Tool Accuracy** — with a 10-mode failure taxonomy that pinpoints whether regressions come from retrieval, generation, or tool selection.
+- Designed deterministic grounding and hallucination detection (unsupported-entity and money-mismatch heuristics) plus an optional LLM-as-judge upgrade, exposed through a FastAPI + React dashboard that turns qualitative agent behavior into reviewable, per-case failure modes.
+- Shipped a Bring-Your-Own-Agent webhook so external teams can score their own agents against the same metrics without touching the codebase.
 
 ## Architecture
 
