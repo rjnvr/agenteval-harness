@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from backend.app.config import get_settings
 from backend.app.database import SessionLocal, get_db, run_migrations
-from backend.app.dataset import acceptable_actions, all_fact_texts, load_human_judge_labels, load_pii_samples, required_facts, seed_database, supporting_facts, upsert_cases
+from backend.app.dataset import acceptable_actions, all_fact_texts, case_context, expected_decision, load_human_judge_labels, load_pii_samples, required_facts, seed_database, supporting_facts, upsert_cases
 from backend.app.evaluator import average_score_breakdown, fact_coverage, failure_counts, score_breakdown
 from backend.app.calibration import calibration_summary
 from backend.app.agents import AgentError, summarize_eval_report
@@ -51,6 +51,8 @@ def _case_out(case: EvalCase) -> EvalCaseOut:
         supporting_facts=supporting_facts(case),
         expected_action=case.expected_action,
         acceptable_actions=acceptable_actions(case),
+        context=case_context(case),
+        expected_decision=expected_decision(case),
         document=case.document,
     )
 
@@ -84,6 +86,10 @@ def _result_out(result: EvalResult) -> EvalResultOut:
         schema_valid=result.schema_valid,
         judge_score=result.judge_score,
         hallucination_score=result.hallucination_score,
+        slot_valid=result.slot_valid,
+        preference_score=result.preference_score,
+        timezone_correct=result.timezone_correct,
+        proposed_slot=result.proposed_slot,
         unsupported_claims=list(json.loads(result.unsupported_claims_json or "[]")),
         latency_ms=result.latency_ms,
         cost_usd=result.cost_usd,
@@ -212,11 +218,16 @@ def get_comparison(db: Session = Depends(get_db)) -> dict[str, object]:
                 "avg_groundedness": avg_groundedness,
                 "strict_pass_rate": run.pass_rate,
                 "score_breakdown": breakdown,
-                "avg_semantic_quality": breakdown["semantic_quality"],
-                "avg_fact_completeness": breakdown["fact_completeness"],
-                "avg_tool_accuracy": breakdown["tool_accuracy"],
-                "avg_grounding": breakdown["grounding"],
-                "avg_retrieval_quality": breakdown["retrieval_quality"],
+                "avg_decision_correctness": breakdown["decision_correctness"],
+                "avg_constraint_satisfaction": breakdown["constraint_satisfaction"],
+                "avg_preference_adherence": breakdown["preference_adherence"],
+                "avg_timezone_accuracy": breakdown["timezone_accuracy"],
+                "avg_coordination_coverage": breakdown["coordination_coverage"],
+                "avg_semantic_quality": breakdown["decision_correctness"],
+                "avg_fact_completeness": breakdown["coordination_coverage"],
+                "avg_tool_accuracy": breakdown["decision_correctness"],
+                "avg_grounding": breakdown["constraint_satisfaction"],
+                "avg_retrieval_quality": breakdown["coordination_coverage"],
                 "failure_counts": failure_counts(results),
                 "failed_cases": [
                     {
@@ -257,6 +268,10 @@ def _latest_run_report(run: EvalRun) -> dict[str, object]:
                 "answer_match": result.answer_match,
                 "fact_recall": result.fact_recall,
                 "tool_correct": result.tool_correct,
+                "slot_valid": result.slot_valid,
+                "preference_score": result.preference_score,
+                "timezone_correct": result.timezone_correct,
+                "proposed_slot": result.proposed_slot,
                 "missed_facts": fact_coverage(result.answer, required_facts(result.case))[1],
                 "unsupported_claims": list(json.loads(result.unsupported_claims_json or "[]")),
             }

@@ -7,6 +7,7 @@ import { ScorePill } from "./ScorePill";
 
 export function ResultRow({ result }: { result: EvalResult }) {
   const [open, setOpen] = useState(false);
+  const proposedSlot = result.proposed_slot || "None";
   return (
     <>
       <tr>
@@ -27,16 +28,16 @@ export function ResultRow({ result }: { result: EvalResult }) {
           <td colSpan={5}>
             <div className="caseDetail">
               <div className="scoreGrid">
-                <ScorePill label="Fact recall" value={pct(result.fact_recall)} />
-                <ScorePill label="Precision" value={pct(result.fact_precision)} />
-                <ScorePill label="Retrieval hit" value={pct(result.retrieval_hit)} />
+                <ScorePill label="Decision" value={result.tool_correct ? "Correct" : "Wrong"} />
+                <ScorePill label="Slot valid" value={result.slot_valid ? "Valid" : "Invalid"} />
+                <ScorePill label="Preferences" value={pct(result.preference_score)} />
+                <ScorePill label="Timezone" value={result.timezone_correct ? "Correct" : "Wrong"} />
+                <ScorePill label="Coverage" value={pct(result.fact_recall)} />
+                <ScorePill label="Context hit" value={pct(result.retrieval_hit)} />
                 <ScorePill label="Grounded" value={pct(result.groundedness)} />
-                <ScorePill label="Action input" value={pct(result.action_input_score)} />
                 <ScorePill label="Schema" value={result.schema_valid ? "Valid" : "Invalid"} />
                 <ScorePill label="Judge" value={result.judge_score == null ? "Off" : pct(result.judge_score)} />
-                <ScorePill label="Quality" value={pct(result.score_breakdown.semantic_quality)} />
-                <ScorePill label="Tool score" value={pct(result.score_breakdown.tool_accuracy)} />
-                <ScorePill label="Retrieval" value={pct(result.score_breakdown.retrieval_quality)} />
+                <ScorePill label="Constraints" value={pct(result.score_breakdown.constraint_satisfaction)} />
               </div>
               <div><label>Question</label><p>{result.question}</p></div>
               <div><label>Expected</label><p>{result.expected_answer}</p><p className="muted">Action: {result.expected_action}</p></div>
@@ -44,6 +45,7 @@ export function ResultRow({ result }: { result: EvalResult }) {
                 <label>Agent Output</label>
                 <p>{result.answer}</p>
                 <p className="muted">Action: {result.action || "none"} {result.action_input ? `- ${result.action_input}` : ""}</p>
+                <p className="muted">Proposed slot: {proposedSlot}</p>
               </div>
               <div className="factGrid">
                 <div><label>Matched Facts</label><FactChips facts={result.matched_facts} variant="matched" /></div>
@@ -52,9 +54,9 @@ export function ResultRow({ result }: { result: EvalResult }) {
               <div><label>Unsupported Claims</label><FactChips facts={result.unsupported_claims} variant="unsupported" /></div>
               <div><label>Failure Rationale</label><p>{result.failure_explanation}</p></div>
               <div>
-                <label>Retrieved Context</label>
+                <label>Assembled Context</label>
                 <div className="contextList">
-                  {(result.retrieved_chunks.length ? result.retrieved_chunks : ["No retrieved context."]).map((chunk, index) => (
+                  {(result.retrieved_chunks.length ? result.retrieved_chunks : ["No assembled context."]).map((chunk, index) => (
                     <p key={`${result.id}-${index}`}>{chunk}</p>
                   ))}
                 </div>

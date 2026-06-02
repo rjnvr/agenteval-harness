@@ -84,6 +84,8 @@ def ensure_schema() -> None:
         existing = {column["name"] for column in inspector.get_columns("eval_cases")}
         case_columns = {
             "acceptable_actions_json": "TEXT DEFAULT '[]' NOT NULL",
+            "context_json": "TEXT DEFAULT '{}' NOT NULL",
+            "expected_decision_json": "TEXT DEFAULT '{}' NOT NULL",
         }
         with engine.begin() as conn:
             for name, ddl in case_columns.items():
@@ -101,6 +103,10 @@ def ensure_schema() -> None:
             "groundedness": "FLOAT DEFAULT 0 NOT NULL",
             "schema_valid": "BOOLEAN DEFAULT true NOT NULL",
             "judge_score": "FLOAT",
+            "slot_valid": "BOOLEAN DEFAULT true NOT NULL",
+            "preference_score": "FLOAT DEFAULT 1 NOT NULL",
+            "timezone_correct": "BOOLEAN DEFAULT true NOT NULL",
+            "proposed_slot": "TEXT DEFAULT '' NOT NULL",
             "unsupported_claims_json": "TEXT DEFAULT '[]' NOT NULL",
             "failure_mode": "VARCHAR DEFAULT 'none' NOT NULL",
             "failure_explanation": "TEXT DEFAULT '' NOT NULL",

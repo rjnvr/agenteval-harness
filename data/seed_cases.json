@@ -2,422 +2,571 @@
   "documents": [
     {
       "id": "doc_001",
-      "name": "claim_water_damage_001.txt",
-      "category": "insurance_claim",
-      "text": "Insurance claim CLM-1041. Policyholder: Harbor Dental. Loss date: March 4. Reported date: March 22. The claim describes water damage from a failed pipe in the sterilization room. The adjuster notes missing photos of damaged equipment, no plumber invoice, and a late submission beyond the 10 day notice window. Estimated claimed loss is $42,000. Coverage cannot be confirmed until documentation is supplied."
+      "name": "peer_early_call_preference.txt",
+      "category": "preference_conflict",
+      "text": "Scenario: Arjun asks Vela to book a 30-minute call with John and Priya next Wednesday morning. John is in America/Los_Angeles and will take calls before 08:00 only with CEOs, not peers. All attendees are free at 07:00 and 10:00 Pacific, so the correct coordination move is to propose the 10:00 Pacific slot."
     },
     {
       "id": "doc_002",
-      "name": "change_order_001.txt",
-      "category": "construction_change_order",
-      "text": "Construction change order CO-17 for the North Pier tenant buildout. Requested by field superintendent on May 9. Scope adds fire-rated glass partitions and weekend electrical labor. Original contract amount was $480,000. Added material cost is $11,200 and added labor cost is $7,300. Total cost increase is $18,500. Schedule impact is three days. Owner approval is required before work proceeds."
+      "name": "ceo_early_call_allowed.txt",
+      "category": "preference_exception",
+      "text": "Scenario: Arjun asks Vela to book a 30-minute call between John and Maya next Wednesday morning. Maya is a CEO. John normally avoids calls before 08:00 Pacific unless the attendee is a CEO. Both calendars are free at 07:00 Pacific, so the early CEO exception applies."
     },
     {
       "id": "doc_003",
-      "name": "invoice_cloud_services_001.txt",
-      "category": "invoice",
-      "text": "Invoice INV-8831 from CloudMetric Labs to Lumen Retail. Billing period: April 1 to April 30. Amount due is $9,840. Purchase order PO-4482 is present. The invoice matches the contracted monthly monitoring fee and includes no overage charges. Payment terms are net 30. Finance note: approve if department code 612 is still active."
+      "name": "sf_london_timezone_spread.txt",
+      "category": "timezone_spread",
+      "text": "Scenario: Arjun asks for a 30-minute SF/London partner call Thursday morning Pacific. Sarah is in America/Los_Angeles and Oliver is in Europe/London. The supported slot is 09:00 Pacific, which is 17:00 London. A 09:00 London interpretation would be wrong."
     },
     {
       "id": "doc_004",
-      "name": "contract_vendor_001.txt",
-      "category": "contract",
-      "text": "Vendor services agreement with BrightDesk Support. Effective date: June 1. The contract auto-renews annually unless either party gives 60 days notice. Liability is capped at fees paid in the prior three months. Data processing addendum is missing. Security exhibit references SOC 2 but no current report is attached. Legal should create a task to obtain missing security documents before signature."
+      "name": "busy_calendar_overlap.txt",
+      "category": "multi_party_booking",
+      "text": "Scenario: Arjun asks to book Sarah and Mark Friday morning. Sarah has a busy block from 10:00 to 10:30 Pacific, while Mark is free. The correct slot is 11:00 Pacific, not the tempting 10:00 overlap."
     },
     {
       "id": "doc_005",
-      "name": "compliance_note_privacy_001.txt",
-      "category": "compliance_note",
-      "text": "Compliance review note CR-221. A marketing export included customer email addresses and purchase history. The export was shared with an external analytics vendor before vendor approval was completed. The note flags possible privacy policy breach and missing data processing agreement. Compliance owner recommends escalation for privacy review within two business days."
+      "name": "unknown_availability_followup.txt",
+      "category": "missing_availability",
+      "text": "Scenario: Arjun asks to book Leo and Nina next Monday. Leo has not shared availability. Vela should request Leo's availability instead of booking from Nina's calendar alone."
     },
     {
       "id": "doc_006",
-      "name": "claim_roof_hail_002.txt",
-      "category": "insurance_claim",
-      "text": "Insurance claim CLM-1099. Property: Westbrook Storage. Reported hail damage to roof panels. Loss date: April 12. Reported date: April 14. Photos, weather report, and contractor estimate are attached. Claimed repair amount is $31,750. No prior roof exclusion appears in the policy file. Adjuster note: documentation is complete and no immediate risk is identified."
+      "name": "reschedule_gracefully.txt",
+      "category": "reschedule",
+      "text": "Scenario: A 13:00 Pacific call with Rachel and Omar needs to move because Rachel is now busy. Both are free at 14:00 Pacific, so Vela should propose an alternative and update the coordination thread."
     },
     {
       "id": "doc_007",
-      "name": "change_order_foundation_002.txt",
-      "category": "construction_change_order",
-      "text": "Change order CO-24 for the civic center foundation package. Geotechnical memo found unsuitable soil below gridline C. Contractor proposes undercutting, disposal, and imported structural fill. Added cost is $64,900. Schedule impact is twelve days. The change exceeds the $50,000 delegated approval threshold and should be flagged as a cost risk."
+      "name": "no_friday_calls.txt",
+      "category": "preference_conflict",
+      "text": "Scenario: Kim has a hard no-Friday external-calls preference. Arjun asks to book Kim and Dev this Friday. Vela should decline the Friday request and ask for a non-Friday window."
     },
     {
       "id": "doc_008",
-      "name": "invoice_facilities_002.txt",
-      "category": "invoice",
-      "text": "Invoice INV-2044 from Metro Facilities. Amount due is $14,260 for after-hours HVAC repair. Purchase order is missing. The service ticket was approved by operations, but the invoice includes an unexplained emergency fee of $1,800. Accounts payable should request more information before approval."
+      "name": "three_person_morning_intersection.txt",
+      "category": "multi_party_booking",
+      "text": "Scenario: Book a three-person design review Tuesday morning with Ana, Ben, and Chloe. Their first shared 30-minute opening is 09:30 Pacific after earlier individual conflicts."
     },
     {
       "id": "doc_009",
-      "name": "contract_lease_002.txt",
-      "category": "contract",
-      "text": "Office lease amendment for Suite 410. The amendment extends the term by 24 months and increases monthly rent to $22,500 starting September 1. It also adds a restoration obligation at tenant expense. The insurance certificate is expired. Create a task for legal operations to collect updated insurance evidence."
+      "name": "after_hours_request.txt",
+      "category": "preference_conflict",
+      "text": "Scenario: Arjun asks for an evening call with Ella and Faisal. Ella's working hours end at 17:00 Pacific. The correct move is to propose a next-morning alternative at 09:00 Pacific."
     },
     {
       "id": "doc_010",
-      "name": "compliance_note_training_002.txt",
-      "category": "compliance_note",
-      "text": "Compliance note CR-238. Quarterly AML training completion is 96 percent. Four contractors have not completed the module by the deadline. No customer impact is noted. The compliance team recommends creating a task for contractor follow-up and weekly completion tracking."
+      "name": "new_york_denver_timezone.txt",
+      "category": "timezone_spread",
+      "text": "Scenario: Book Nora in New York and Miles in Denver for a 30-minute check-in. The shared slot is 11:00 Eastern, which is 09:00 Mountain."
     },
     {
       "id": "doc_011",
-      "name": "claim_theft_003.txt",
-      "category": "insurance_claim",
-      "text": "Insurance claim CLM-1120 for retail inventory theft. Police report number is listed as pending. Inventory spreadsheet is attached, but proof of purchase is missing for high-value tablets. Loss was reported 18 days after discovery. Claimed amount is $27,400. Adjuster should request more information on proof of purchase and police report status."
+      "name": "missed_third_participant_trap.txt",
+      "category": "multi_party_booking",
+      "text": "Scenario: Arjun asks to book Tom, Uma, and Victor. Tom and Uma are free at 09:00 Pacific, but Victor is busy then. All three are free at 10:00 Pacific."
     },
     {
       "id": "doc_012",
-      "name": "change_order_paint_003.txt",
-      "category": "construction_change_order",
-      "text": "Change order CO-31 for classroom repainting. Owner requested color change after mockup review. Added paint material is $2,600 and added labor is $3,900. Total cost increase is $6,500. No schedule impact. The amount is within project manager approval authority."
+      "name": "no_lunch_preference.txt",
+      "category": "preference_conflict",
+      "text": "Scenario: Dana blocks lunch from 12:00 to 13:00 Pacific for focus and food. Arjun asks for a midday call with Dana and Eli. The correct slot is 13:00 Pacific, not noon."
     },
     {
       "id": "doc_013",
-      "name": "invoice_legal_003.txt",
-      "category": "invoice",
-      "text": "Invoice INV-5520 from Benton Legal. Amount due is $18,750 for contract review and employment advisory work. Matter IDs are present. The invoice exceeds the monthly legal budget by $4,250 and includes partner review time not listed in the engagement letter. Finance should flag risk for budget overage review."
+      "name": "whatsapp_followup_unknown.txt",
+      "category": "missing_availability",
+      "text": "Scenario: A WhatsApp request asks Vela to coordinate with Iris and Jay. Jay has not responded with availability. Vela should follow up with Jay before proposing a confirmed slot."
     },
     {
       "id": "doc_014",
-      "name": "contract_supplier_003.txt",
-      "category": "contract",
-      "text": "Supply agreement with Northline Plastics. Minimum purchase commitment is 40,000 units per quarter. Termination for convenience requires 90 days notice. The draft lacks a price adjustment cap and does not include audit rights. Procurement should create a task to revise commercial protections before approval."
+      "name": "all_slots_blocked_decline.txt",
+      "category": "preference_conflict",
+      "text": "Scenario: Liam and Mei are unavailable across the requested Wednesday morning window. Vela should decline that window and ask for more options instead of inventing availability."
     },
     {
       "id": "doc_015",
-      "name": "compliance_note_safety_003.txt",
-      "category": "compliance_note",
-      "text": "Safety compliance note SF-19. Warehouse inspection found blocked emergency exit access and missing forklift inspection logs. The supervisor corrected the blocked exit during inspection, but logs remain missing for two vehicles. Escalate compliance review because inspection evidence is incomplete."
+      "name": "sms_calendar_unknown.txt",
+      "category": "missing_availability",
+      "text": "Scenario: An SMS asks Vela to book Mark and Pooja Thursday late morning. Pooja's calendar connection is missing, so Vela should request availability before booking."
     },
     {
       "id": "doc_016",
-      "name": "claim_business_interruption_004.txt",
-      "category": "insurance_claim",
-      "text": "Business interruption claim CLM-1184. Cafe closure lasted five days after a nearby electrical fire. The policyholder submitted sales history and utility outage confirmation. The claim lacks payroll records for the closure period. Estimated loss is $16,200. Request more information for payroll records."
+      "name": "london_reschedule_timezone.txt",
+      "category": "reschedule",
+      "text": "Scenario: A London/SF customer call must be rescheduled. The supported alternative is 08:00 Pacific, which is 16:00 London. Vela should propose the alternative with the timezone conversion."
     },
     {
       "id": "doc_017",
-      "name": "change_order_mechanical_004.txt",
-      "category": "construction_change_order",
-      "text": "Mechanical change order CO-40. Engineer revised duct routing to avoid an existing beam. Added sheet metal is $8,450 and added coordination labor is $5,550. Total cost increase is $14,000. Schedule impact is one day. The change should be tracked but does not exceed risk threshold."
+      "name": "founder_priority_window.txt",
+      "category": "preference_exception",
+      "text": "Scenario: Sam avoids calls before 08:00 Pacific except with founders or CEOs. A founder candidate can only meet at 07:30 Pacific, and Sam is free. The exception should be honored."
     },
     {
       "id": "doc_018",
-      "name": "invoice_security_004.txt",
-      "category": "invoice",
-      "text": "Invoice INV-7441 from Shield Security. Amount due is $6,300 for monthly monitoring. Purchase order PO-7780 is present, rate matches the master service agreement, and no exception fees are included. Operations confirmed service completion. Approve invoice for payment."
+      "name": "focus_block_reschedule.txt",
+      "category": "reschedule",
+      "text": "Scenario: Priya has a protected focus block at 15:00 Pacific. A meeting with Quinn was tentatively placed there. The correct move is to propose 16:00 Pacific instead."
     },
     {
       "id": "doc_019",
-      "name": "contract_dpa_004.txt",
-      "category": "contract",
-      "text": "Data processing addendum for Atlas Insights. The vendor will process customer identifiers and behavioral analytics. Subprocessor list is attached. The breach notification period is 10 business days, longer than company policy of 72 hours. Escalate compliance review before signing."
+      "name": "calendar_hold_not_confirmed.txt",
+      "category": "missing_availability",
+      "text": "Scenario: The requester asks Vela to book Zed and Alina, but Alina only has a tentative hold and has not confirmed. Vela should request confirmation before booking."
     },
     {
       "id": "doc_020",
-      "name": "compliance_note_access_004.txt",
-      "category": "compliance_note",
-      "text": "Access review AR-77. Three former contractors still had active dashboard accounts after termination. Access was disabled during review. The manager approval trail is missing for two privileged roles. Create a task to document approvals and verify offboarding controls."
+      "name": "board_meeting_all_free.txt",
+      "category": "multi_party_booking",
+      "text": "Scenario: Book a board prep call with Grace, Henry, and Isla. All three calendars and working-hour preferences support 15:30 Pacific, so Vela can book that slot."
     }
   ],
   "cases": [
     {
       "id": "case_001",
       "document_id": "doc_001",
-      "input": "What risks exist in this claim?",
-      "expected_answer": "The claim has missing documentation and late submission risk.",
+      "input": "Book a 30-minute call with John and Priya next Wednesday morning.",
+      "expected_answer": "Propose 10:00-10:30 AM Pacific because John does not take 7 AM peer calls.",
       "expected_facts": [
-        {
-          "text": "missing photos",
-          "required": true
-        },
-        {
-          "text": "no plumber invoice",
-          "required": true
-        },
-        {
-          "text": "late submission",
-          "required": true
-        }
+        {"text": "John will take calls before 08:00 only with CEOs", "required": true},
+        {"text": "Priya is a peer", "required": true},
+        {"text": "all attendees are free at 10:00 Pacific", "required": true},
+        {"text": "7:00 Pacific is available but violates John's peer-call preference", "required": false}
       ],
-      "expected_action": "request_more_info",
-      "acceptable_actions": [
-        "request_more_info",
-        "flag_risk"
-      ]
+      "expected_action": "propose_times",
+      "acceptable_actions": ["propose_times", "book_meeting"],
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-10 morning", "meeting_with_seniority": "peer", "attendees": ["John", "Priya"]},
+        "participants": [
+          {"name": "John", "role": "operator", "timezone": "America/Los_Angeles", "working_hours": {"start": "07:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": ["No calls before 08:00 unless attendee is a CEO."]},
+          {"name": "Priya", "role": "peer", "timezone": "America/Los_Angeles", "working_hours": {"start": "07:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": [{"type": "no_early_unless_seniority", "person": "John", "before": "08:00", "allowed_seniority": ["CEO"]}]
+      },
+      "expected_decision": {"action": "propose_times", "slot": {"start": "2026-06-10T10:00:00-07:00", "end": "2026-06-10T10:30:00-07:00"}}
     },
     {
       "id": "case_002",
       "document_id": "doc_002",
-      "input": "What is the total cost increase?",
-      "expected_answer": "$18,500",
+      "input": "Book John with Maya, a CEO, next Wednesday morning.",
+      "expected_answer": "Book 7:00-7:30 AM Pacific because John's early-call exception allows CEO meetings.",
       "expected_facts": [
-        {
-          "text": "$18,500 total cost increase",
-          "required": true
-        },
-        {
-          "text": "$11,200 material cost",
-          "required": false
-        },
-        {
-          "text": "$7,300 labor cost",
-          "required": false
-        }
+        {"text": "Maya is a CEO", "required": true},
+        {"text": "John allows calls before 08:00 with CEOs", "required": true},
+        {"text": "both calendars are free at 07:00 Pacific", "required": true}
       ],
-      "expected_action": "flag_cost_risk"
+      "expected_action": "book_meeting",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-10 morning", "meeting_with_seniority": "CEO", "attendees": ["John", "Maya"]},
+        "participants": [
+          {"name": "John", "role": "operator", "timezone": "America/Los_Angeles", "working_hours": {"start": "07:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": ["No calls before 08:00 unless attendee is a CEO."]},
+          {"name": "Maya", "role": "CEO", "timezone": "America/Los_Angeles", "working_hours": {"start": "07:00", "end": "18:00"}, "availability_known": true, "busy_blocks": [], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": [{"type": "no_early_unless_seniority", "person": "John", "before": "08:00", "allowed_seniority": ["CEO"]}]
+      },
+      "expected_decision": {"action": "book_meeting", "slot": {"start": "2026-06-10T07:00:00-07:00", "end": "2026-06-10T07:30:00-07:00"}}
     },
     {
       "id": "case_003",
       "document_id": "doc_003",
-      "input": "Should this invoice be approved?",
-      "expected_answer": "The invoice can be approved if department code 612 is active.",
+      "input": "Find a Thursday morning Pacific time for Sarah and Oliver.",
+      "expected_answer": "Propose 9:00-9:30 AM Pacific, which is 5:00-5:30 PM London.",
       "expected_facts": [
-        {
-          "text": "department code 612 is active",
-          "required": true
-        },
-        {
-          "text": "PO-4482 is present",
-          "required": false
-        },
-        {
-          "text": "matches contracted monthly monitoring fee",
-          "required": false
-        },
-        {
-          "text": "no overage charges",
-          "required": false
-        }
+        {"text": "Sarah is in America/Los_Angeles", "required": true},
+        {"text": "Oliver is in Europe/London", "required": true},
+        {"text": "9:00 Pacific is 17:00 London", "required": true}
       ],
-      "expected_action": "approve_invoice",
-      "acceptable_actions": [
-        "approve_invoice",
-        "request_more_info"
-      ]
+      "expected_action": "propose_times",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-11 morning Pacific", "meeting_with_seniority": "partner", "attendees": ["Sarah", "Oliver"]},
+        "participants": [
+          {"name": "Sarah", "role": "partner", "timezone": "America/Los_Angeles", "working_hours": {"start": "08:00", "end": "17:30"}, "availability_known": true, "busy_blocks": [], "preferences": []},
+          {"name": "Oliver", "role": "partner", "timezone": "Europe/London", "working_hours": {"start": "09:00", "end": "18:00"}, "availability_known": true, "busy_blocks": [], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": []
+      },
+      "expected_decision": {"action": "propose_times", "slot": {"start": "2026-06-11T09:00:00-07:00", "end": "2026-06-11T09:30:00-07:00"}}
     },
     {
       "id": "case_004",
       "document_id": "doc_004",
-      "input": "What should legal operations do before signature?",
-      "expected_answer": "Create a task to obtain the missing data processing addendum and current SOC 2 report.",
+      "input": "Book Sarah and Mark this Friday morning.",
+      "expected_answer": "Book 11:00-11:30 AM Pacific because Sarah is busy at 10:00.",
       "expected_facts": [
-        "data processing addendum is missing",
-        "no current SOC 2 report",
-        "before signature"
+        {"text": "Sarah is busy from 10:00 to 10:30 Pacific", "required": true},
+        {"text": "Mark is free Friday morning", "required": true},
+        {"text": "both are free at 11:00 Pacific", "required": true}
       ],
-      "expected_action": "create_task"
+      "expected_action": "book_meeting",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-12 morning", "meeting_with_seniority": "peer", "attendees": ["Sarah", "Mark"]},
+        "participants": [
+          {"name": "Sarah", "role": "teammate", "timezone": "America/Los_Angeles", "working_hours": {"start": "08:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [{"start": "2026-06-12T10:00:00-07:00", "end": "2026-06-12T10:30:00-07:00"}], "preferences": []},
+          {"name": "Mark", "role": "teammate", "timezone": "America/Los_Angeles", "working_hours": {"start": "08:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": []
+      },
+      "expected_decision": {"action": "book_meeting", "slot": {"start": "2026-06-12T11:00:00-07:00", "end": "2026-06-12T11:30:00-07:00"}}
     },
     {
       "id": "case_005",
       "document_id": "doc_005",
-      "input": "What compliance action is required?",
-      "expected_answer": "Escalate privacy review because customer data was shared before vendor approval and the data processing agreement is missing.",
+      "input": "Book Leo and Nina next Monday.",
+      "expected_answer": "Request Leo's availability before proposing or booking a time.",
       "expected_facts": [
-        "customer email addresses and purchase history",
-        "external analytics vendor before approval",
-        "missing data processing agreement"
+        {"text": "Leo has not shared availability", "required": true},
+        {"text": "Nina's calendar alone is insufficient", "required": true},
+        {"text": "follow up before booking", "required": true}
       ],
-      "expected_action": "escalate_compliance_review"
+      "expected_action": "request_availability",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-15", "meeting_with_seniority": "peer", "attendees": ["Leo", "Nina"]},
+        "participants": [
+          {"name": "Leo", "role": "candidate", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": false, "busy_blocks": [], "preferences": []},
+          {"name": "Nina", "role": "teammate", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": [{"type": "require_availability_before_booking", "person": "Leo"}]
+      },
+      "expected_decision": {"action": "request_availability", "info_needed": "Leo availability"}
     },
     {
       "id": "case_006",
       "document_id": "doc_006",
-      "input": "Are there immediate claim risks?",
-      "expected_answer": "No immediate risk is identified because documentation is complete.",
+      "input": "Rachel needs to reschedule the 1 PM call with Omar.",
+      "expected_answer": "Propose moving the call to 2:00-2:30 PM Pacific because Rachel is no longer free at 1 PM.",
       "expected_facts": [
-        "photos attached",
-        "weather report attached",
-        "contractor estimate attached"
+        {"text": "Rachel is busy at 13:00 Pacific", "required": true},
+        {"text": "Omar is free at 14:00 Pacific", "required": true},
+        {"text": "both are free at 14:00 Pacific", "required": true}
       ],
-      "expected_action": "create_task"
+      "expected_action": "propose_alternative",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-15 afternoon", "meeting_with_seniority": "customer", "attendees": ["Rachel", "Omar"]},
+        "participants": [
+          {"name": "Rachel", "role": "customer", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [{"start": "2026-06-15T13:00:00-07:00", "end": "2026-06-15T13:30:00-07:00"}], "preferences": []},
+          {"name": "Omar", "role": "seller", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": []
+      },
+      "expected_decision": {"action": "propose_alternative", "slot": {"start": "2026-06-15T14:00:00-07:00", "end": "2026-06-15T14:30:00-07:00"}}
     },
     {
       "id": "case_007",
       "document_id": "doc_007",
-      "input": "Why should this change order be flagged?",
-      "expected_answer": "It should be flagged as a cost risk because the $64,900 added cost exceeds the $50,000 approval threshold.",
+      "input": "Book Kim and Dev this Friday.",
+      "expected_answer": "Decline the Friday window because Kim has a hard no-Friday external-call preference.",
       "expected_facts": [
-        "$64,900 added cost",
-        "twelve days schedule impact",
-        "exceeds the $50,000 threshold"
+        {"text": "Kim has a hard no-Friday external-calls preference", "required": true},
+        {"text": "the request is for Friday", "required": true},
+        {"text": "ask for a non-Friday window", "required": true}
       ],
-      "expected_action": "flag_cost_risk"
+      "expected_action": "decline",
+      "acceptable_actions": ["decline", "propose_alternative"],
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-19 Friday", "meeting_with_seniority": "peer", "attendees": ["Kim", "Dev"]},
+        "participants": [
+          {"name": "Kim", "role": "executive", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": ["No external calls on Fridays."]},
+          {"name": "Dev", "role": "peer", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": [{"type": "avoid_day", "person": "Kim", "day": "Friday"}]
+      },
+      "expected_decision": {"action": "decline", "reason": "Kim avoids Friday external calls"}
     },
     {
       "id": "case_008",
       "document_id": "doc_008",
-      "input": "What information is missing before invoice approval?",
-      "expected_answer": "The purchase order is missing and the $1,800 emergency fee is unexplained.",
+      "input": "Schedule Ana, Ben, and Chloe for a Tuesday morning design review.",
+      "expected_answer": "Propose 9:30-10:00 AM Pacific, the first slot where Ana, Ben, and Chloe are all free.",
       "expected_facts": [
-        "purchase order is missing",
-        "$1,800 emergency fee",
-        "request more information"
+        {"text": "Ana is busy before 09:30 Pacific", "required": true},
+        {"text": "Ben is free at 09:30 Pacific", "required": true},
+        {"text": "Chloe is free at 09:30 Pacific", "required": true}
       ],
-      "expected_action": "request_more_info"
+      "expected_action": "propose_times",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-16 morning", "meeting_with_seniority": "team", "attendees": ["Ana", "Ben", "Chloe"]},
+        "participants": [
+          {"name": "Ana", "role": "designer", "timezone": "America/Los_Angeles", "working_hours": {"start": "08:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [{"start": "2026-06-16T09:00:00-07:00", "end": "2026-06-16T09:30:00-07:00"}], "preferences": []},
+          {"name": "Ben", "role": "engineer", "timezone": "America/Los_Angeles", "working_hours": {"start": "08:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []},
+          {"name": "Chloe", "role": "pm", "timezone": "America/Los_Angeles", "working_hours": {"start": "08:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": []
+      },
+      "expected_decision": {"action": "propose_times", "slot": {"start": "2026-06-16T09:30:00-07:00", "end": "2026-06-16T10:00:00-07:00"}}
     },
     {
       "id": "case_009",
       "document_id": "doc_009",
-      "input": "What follow-up is needed for the lease amendment?",
-      "expected_answer": "Create a task to collect updated insurance evidence because the certificate is expired.",
+      "input": "Can we do an evening call with Ella and Faisal?",
+      "expected_answer": "Propose 9:00-9:30 AM Pacific the next morning because Ella's working hours end at 5 PM.",
       "expected_facts": [
-        "insurance certificate is expired",
-        "collect updated insurance evidence",
-        "restoration obligation"
+        {"text": "Ella's working hours end at 17:00 Pacific", "required": true},
+        {"text": "the evening request is outside working hours", "required": true},
+        {"text": "9:00 Pacific next morning is valid", "required": true}
       ],
-      "expected_action": "create_task"
+      "expected_action": "propose_alternative",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-16 evening", "meeting_with_seniority": "peer", "attendees": ["Ella", "Faisal"]},
+        "participants": [
+          {"name": "Ella", "role": "operator", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": ["No calls after working hours."]},
+          {"name": "Faisal", "role": "peer", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "18:00"}, "availability_known": true, "busy_blocks": [], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": [{"type": "no_calls_after", "person": "Ella", "after": "17:00"}]
+      },
+      "expected_decision": {"action": "propose_alternative", "slot": {"start": "2026-06-17T09:00:00-07:00", "end": "2026-06-17T09:30:00-07:00"}}
     },
     {
       "id": "case_010",
       "document_id": "doc_010",
-      "input": "What is the recommended next step?",
-      "expected_answer": "Create a task for contractor follow-up and weekly completion tracking.",
+      "input": "Book Nora and Miles for a check-in.",
+      "expected_answer": "Book 11:00-11:30 AM Eastern, which is 9:00-9:30 AM Mountain for Miles.",
       "expected_facts": [
-        "four contractors incomplete",
-        "deadline missed",
-        "weekly completion tracking"
+        {"text": "Nora is in America/New_York", "required": true},
+        {"text": "Miles is in America/Denver", "required": true},
+        {"text": "11:00 Eastern is 09:00 Mountain", "required": true}
       ],
-      "expected_action": "create_task"
+      "expected_action": "book_meeting",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-17 morning Eastern", "meeting_with_seniority": "peer", "attendees": ["Nora", "Miles"]},
+        "participants": [
+          {"name": "Nora", "role": "manager", "timezone": "America/New_York", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []},
+          {"name": "Miles", "role": "manager", "timezone": "America/Denver", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": []
+      },
+      "expected_decision": {"action": "book_meeting", "slot": {"start": "2026-06-17T11:00:00-04:00", "end": "2026-06-17T11:30:00-04:00"}}
     },
     {
       "id": "case_011",
       "document_id": "doc_011",
-      "input": "What should the adjuster request?",
-      "expected_answer": "Request more information on proof of purchase and police report status.",
+      "input": "Book Tom, Uma, and Victor.",
+      "expected_answer": "Book 10:00-10:30 AM Pacific because Victor is busy at 9:00 and all three are free at 10:00.",
       "expected_facts": [
-        "police report pending",
-        "proof of purchase is missing",
-        "reported 18 days after discovery"
+        {"text": "Victor is busy at 09:00 Pacific", "required": true},
+        {"text": "Tom and Uma are free at 09:00 Pacific", "required": false},
+        {"text": "all three are free at 10:00 Pacific", "required": true}
       ],
-      "expected_action": "request_more_info"
+      "expected_action": "book_meeting",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-18 morning", "meeting_with_seniority": "team", "attendees": ["Tom", "Uma", "Victor"]},
+        "participants": [
+          {"name": "Tom", "role": "teammate", "timezone": "America/Los_Angeles", "working_hours": {"start": "08:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []},
+          {"name": "Uma", "role": "teammate", "timezone": "America/Los_Angeles", "working_hours": {"start": "08:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []},
+          {"name": "Victor", "role": "teammate", "timezone": "America/Los_Angeles", "working_hours": {"start": "08:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [{"start": "2026-06-18T09:00:00-07:00", "end": "2026-06-18T09:30:00-07:00"}], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": []
+      },
+      "expected_decision": {"action": "book_meeting", "slot": {"start": "2026-06-18T10:00:00-07:00", "end": "2026-06-18T10:30:00-07:00"}}
     },
     {
       "id": "case_012",
       "document_id": "doc_012",
-      "input": "What is the added cost for repainting?",
-      "expected_answer": "$6,500",
+      "input": "Book Dana and Eli around midday.",
+      "expected_answer": "Book 1:00-1:30 PM Pacific because Dana blocks 12:00-1:00 PM for lunch.",
       "expected_facts": [
-        {
-          "text": "$6,500 total cost increase",
-          "required": true
-        },
-        {
-          "text": "$2,600 paint material",
-          "required": false
-        },
-        {
-          "text": "$3,900 labor",
-          "required": false
-        }
+        {"text": "Dana blocks lunch from 12:00 to 13:00 Pacific", "required": true},
+        {"text": "Eli is available at 13:00 Pacific", "required": true},
+        {"text": "13:00 Pacific respects the lunch preference", "required": true}
       ],
-      "expected_action": "create_task"
+      "expected_action": "book_meeting",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-18 midday", "meeting_with_seniority": "peer", "attendees": ["Dana", "Eli"]},
+        "participants": [
+          {"name": "Dana", "role": "manager", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": ["No meetings during lunch from 12:00 to 13:00."]},
+          {"name": "Eli", "role": "peer", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": [{"type": "no_lunch", "person": "Dana", "start": "12:00", "end": "13:00"}]
+      },
+      "expected_decision": {"action": "book_meeting", "slot": {"start": "2026-06-18T13:00:00-07:00", "end": "2026-06-18T13:30:00-07:00"}}
     },
     {
       "id": "case_013",
       "document_id": "doc_013",
-      "input": "Why is the legal invoice risky?",
-      "expected_answer": "It exceeds the monthly legal budget by $4,250 and includes partner review time not listed in the engagement letter.",
+      "input": "WhatsApp: coordinate Iris and Jay for a 30-minute call.",
+      "expected_answer": "Follow up with Jay for availability before proposing a time.",
       "expected_facts": [
-        "exceeds monthly legal budget by $4,250",
-        "partner review time",
-        "not listed in engagement letter"
+        {"text": "Jay has not responded with availability", "required": true},
+        {"text": "Iris availability alone is not enough", "required": true},
+        {"text": "follow up before proposing", "required": true}
       ],
-      "expected_action": "flag_risk"
+      "expected_action": "request_availability",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-22", "meeting_with_seniority": "peer", "attendees": ["Iris", "Jay"]},
+        "participants": [
+          {"name": "Iris", "role": "teammate", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []},
+          {"name": "Jay", "role": "external", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": false, "busy_blocks": [], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": [{"type": "require_availability_before_booking", "person": "Jay"}]
+      },
+      "expected_decision": {"action": "request_availability", "info_needed": "Jay availability"}
     },
     {
       "id": "case_014",
       "document_id": "doc_014",
-      "input": "What commercial protections need revision?",
-      "expected_answer": "Create a task to add a price adjustment cap and audit rights before approval.",
+      "input": "Find a Wednesday morning time for Liam and Mei.",
+      "expected_answer": "Decline the Wednesday morning window because Liam and Mei have no shared availability.",
       "expected_facts": [
-        "lacks price adjustment cap",
-        "does not include audit rights",
-        "before approval"
+        {"text": "Liam is busy across the requested Wednesday morning window", "required": true},
+        {"text": "Mei is busy across the requested Wednesday morning window", "required": true},
+        {"text": "do not invent availability", "required": true}
       ],
-      "expected_action": "create_task"
+      "expected_action": "decline",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-24 morning", "meeting_with_seniority": "peer", "attendees": ["Liam", "Mei"]},
+        "participants": [
+          {"name": "Liam", "role": "teammate", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "12:00"}, "availability_known": true, "busy_blocks": [{"start": "2026-06-24T09:00:00-07:00", "end": "2026-06-24T12:00:00-07:00"}], "preferences": []},
+          {"name": "Mei", "role": "teammate", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "12:00"}, "availability_known": true, "busy_blocks": [{"start": "2026-06-24T09:00:00-07:00", "end": "2026-06-24T12:00:00-07:00"}], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": []
+      },
+      "expected_decision": {"action": "decline", "reason": "no shared availability"}
     },
     {
       "id": "case_015",
       "document_id": "doc_015",
-      "input": "Why should this safety note be escalated?",
-      "expected_answer": "Escalate compliance review because forklift inspection logs remain missing and inspection evidence is incomplete.",
+      "input": "SMS: book Mark and Pooja Thursday late morning.",
+      "expected_answer": "Request Pooja's availability because her calendar connection is missing.",
       "expected_facts": [
-        "blocked emergency exit",
-        "missing forklift inspection logs",
-        "logs remain missing for two vehicles"
+        {"text": "Pooja's calendar connection is missing", "required": true},
+        {"text": "Mark's availability is not enough", "required": true},
+        {"text": "request availability before booking", "required": true}
       ],
-      "expected_action": "escalate_compliance_review"
+      "expected_action": "request_availability",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-25 late morning", "meeting_with_seniority": "peer", "attendees": ["Mark", "Pooja"]},
+        "participants": [
+          {"name": "Mark", "role": "operator", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []},
+          {"name": "Pooja", "role": "external", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": false, "busy_blocks": [], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": [{"type": "require_availability_before_booking", "person": "Pooja"}]
+      },
+      "expected_decision": {"action": "request_availability", "info_needed": "Pooja availability"}
     },
     {
       "id": "case_016",
       "document_id": "doc_016",
-      "input": "What is missing from the business interruption claim?",
-      "expected_answer": "Payroll records for the closure period are missing.",
+      "input": "Reschedule the London/SF customer call.",
+      "expected_answer": "Propose 8:00-8:30 AM Pacific, which is 4:00-4:30 PM London.",
       "expected_facts": [
-        "five days closure",
-        "sales history submitted",
-        "payroll records missing"
+        {"text": "customer is in Europe/London", "required": true},
+        {"text": "8:00 Pacific is 16:00 London", "required": true},
+        {"text": "both calendars support the alternative", "required": true}
       ],
-      "expected_action": "request_more_info"
+      "expected_action": "propose_alternative",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-23", "meeting_with_seniority": "customer", "attendees": ["Wendy", "Yara"]},
+        "participants": [
+          {"name": "Wendy", "role": "seller", "timezone": "America/Los_Angeles", "working_hours": {"start": "08:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []},
+          {"name": "Yara", "role": "customer", "timezone": "Europe/London", "working_hours": {"start": "09:00", "end": "17:30"}, "availability_known": true, "busy_blocks": [], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": []
+      },
+      "expected_decision": {"action": "propose_alternative", "slot": {"start": "2026-06-23T08:00:00-07:00", "end": "2026-06-23T08:30:00-07:00"}}
     },
     {
       "id": "case_017",
       "document_id": "doc_017",
-      "input": "What is the total mechanical change order increase?",
-      "expected_answer": "$14,000",
+      "input": "Book Sam with a founder candidate who can only meet at 7:30 AM.",
+      "expected_answer": "Book 7:30-8:00 AM Pacific because Sam's early-call exception allows founder meetings.",
       "expected_facts": [
-        {
-          "text": "$14,000 total cost increase",
-          "required": true
-        },
-        {
-          "text": "$8,450 sheet metal",
-          "required": false
-        },
-        {
-          "text": "$5,550 coordination labor",
-          "required": false
-        }
+        {"text": "Sam avoids calls before 08:00 except with founders or CEOs", "required": true},
+        {"text": "the attendee is a founder", "required": true},
+        {"text": "Sam is free at 07:30 Pacific", "required": true}
       ],
-      "expected_action": "create_task"
+      "expected_action": "book_meeting",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-24 early morning", "meeting_with_seniority": "founder", "attendees": ["Sam", "Founder Candidate"]},
+        "participants": [
+          {"name": "Sam", "role": "operator", "timezone": "America/Los_Angeles", "working_hours": {"start": "07:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": ["No calls before 08:00 unless attendee is a founder or CEO."]},
+          {"name": "Founder Candidate", "role": "founder", "timezone": "America/Los_Angeles", "working_hours": {"start": "07:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": [{"type": "no_early_unless_seniority", "person": "Sam", "before": "08:00", "allowed_seniority": ["founder", "CEO"]}]
+      },
+      "expected_decision": {"action": "book_meeting", "slot": {"start": "2026-06-24T07:30:00-07:00", "end": "2026-06-24T08:00:00-07:00"}}
     },
     {
       "id": "case_018",
       "document_id": "doc_018",
-      "input": "Should the security invoice be paid?",
-      "expected_answer": "Approve invoice for payment because PO-7780 is present, the rate matches, and service completion was confirmed.",
+      "input": "Move Priya and Quinn off Priya's 3 PM focus block.",
+      "expected_answer": "Propose 4:00-4:30 PM Pacific because Priya's 3 PM focus block is protected.",
       "expected_facts": [
-        "PO-7780 is present",
-        "rate matches master service agreement",
-        "service completion confirmed"
+        {"text": "Priya has a protected focus block at 15:00 Pacific", "required": true},
+        {"text": "Quinn is free at 16:00 Pacific", "required": true},
+        {"text": "16:00 Pacific avoids the focus block", "required": true}
       ],
-      "expected_action": "approve_invoice"
+      "expected_action": "propose_alternative",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-24 afternoon", "meeting_with_seniority": "peer", "attendees": ["Priya", "Quinn"]},
+        "participants": [
+          {"name": "Priya", "role": "operator", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [{"start": "2026-06-24T15:00:00-07:00", "end": "2026-06-24T16:00:00-07:00"}], "preferences": ["Protect 15:00 focus block."]},
+          {"name": "Quinn", "role": "peer", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": []
+      },
+      "expected_decision": {"action": "propose_alternative", "slot": {"start": "2026-06-24T16:00:00-07:00", "end": "2026-06-24T16:30:00-07:00"}}
     },
     {
       "id": "case_019",
       "document_id": "doc_019",
-      "input": "What is the contract compliance issue?",
-      "expected_answer": "The 10 business day breach notification period is longer than the 72 hour company policy.",
+      "input": "Book Zed and Alina if the tentative hold works.",
+      "expected_answer": "Request Alina's confirmation because a tentative hold is not confirmed availability.",
       "expected_facts": [
-        "customer identifiers and behavioral analytics",
-        "10 business days",
-        "72 hours company policy"
+        {"text": "Alina only has a tentative hold", "required": true},
+        {"text": "tentative hold is not confirmed availability", "required": true},
+        {"text": "request confirmation before booking", "required": true}
       ],
-      "expected_action": "escalate_compliance_review"
+      "expected_action": "request_availability",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-26", "meeting_with_seniority": "peer", "attendees": ["Zed", "Alina"]},
+        "participants": [
+          {"name": "Zed", "role": "teammate", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []},
+          {"name": "Alina", "role": "external", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": false, "busy_blocks": [], "preferences": ["Tentative hold must be confirmed before booking."]}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": [{"type": "require_availability_before_booking", "person": "Alina"}]
+      },
+      "expected_decision": {"action": "request_availability", "info_needed": "Alina confirmation"}
     },
     {
       "id": "case_020",
       "document_id": "doc_020",
-      "input": "What follow-up task is required after access review?",
-      "expected_answer": "Create a task to document approvals and verify offboarding controls.",
+      "input": "Book the board prep call with Grace, Henry, and Isla.",
+      "expected_answer": "Book 3:30-4:00 PM Pacific because Grace, Henry, and Isla are all free then.",
       "expected_facts": [
-        "three former contractors had active accounts",
-        "access was disabled",
-        "approval trail is missing for two privileged roles"
+        {"text": "Grace is free at 15:30 Pacific", "required": true},
+        {"text": "Henry is free at 15:30 Pacific", "required": true},
+        {"text": "Isla is free at 15:30 Pacific", "required": true}
       ],
-      "expected_action": "create_task"
+      "expected_action": "book_meeting",
+      "context": {
+        "request": {"duration_minutes": 30, "window": "2026-06-26 afternoon", "meeting_with_seniority": "board", "attendees": ["Grace", "Henry", "Isla"]},
+        "participants": [
+          {"name": "Grace", "role": "board", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []},
+          {"name": "Henry", "role": "board", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []},
+          {"name": "Isla", "role": "board", "timezone": "America/Los_Angeles", "working_hours": {"start": "09:00", "end": "17:00"}, "availability_known": true, "busy_blocks": [], "preferences": []}
+        ],
+        "constraints": {"all_participants_free": true, "within_working_hours": true},
+        "preference_rules": []
+      },
+      "expected_decision": {"action": "book_meeting", "slot": {"start": "2026-06-26T15:30:00-07:00", "end": "2026-06-26T16:00:00-07:00"}}
     }
   ]
 }
