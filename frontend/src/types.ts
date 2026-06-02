@@ -1,4 +1,4 @@
-export type Provider = "mock" | "anthropic" | "openai" | "google" | "openrouter" | "webhook";
+export type Provider = "mock" | "naive" | "anthropic" | "openai" | "google" | "openrouter" | "webhook";
 
 export type EvalRun = {
   id: number;
@@ -15,11 +15,11 @@ export type EvalRun = {
 };
 
 export type ScoreBreakdown = {
-  semantic_quality: number;
-  fact_completeness: number;
-  tool_accuracy: number;
-  grounding: number;
-  retrieval_quality: number;
+  decision_correctness: number;
+  constraint_satisfaction: number;
+  preference_adherence: number;
+  timezone_accuracy: number;
+  coordination_coverage: number;
 };
 
 export type EvalResult = {
@@ -32,6 +32,9 @@ export type EvalResult = {
   matched_facts: string[];
   missed_facts: string[];
   expected_action: string;
+  acceptable_actions: string[];
+  context: Record<string, unknown>;
+  expected_decision: Record<string, unknown>;
   answer: string;
   action: string;
   action_input: string;
@@ -45,6 +48,10 @@ export type EvalResult = {
   schema_valid: boolean;
   judge_score: number | null;
   hallucination_score: number;
+  slot_valid: boolean;
+  preference_score: number;
+  timezone_correct: boolean;
+  proposed_slot: string;
   unsupported_claims: string[];
   latency_ms: number;
   cost_usd: number;
@@ -92,6 +99,11 @@ export type ComparisonRun = {
   avg_tool_accuracy: number;
   avg_grounding: number;
   avg_retrieval_quality: number;
+  avg_decision_correctness: number;
+  avg_constraint_satisfaction: number;
+  avg_preference_adherence: number;
+  avg_timezone_accuracy: number;
+  avg_coordination_coverage: number;
   failure_counts: Record<string, number>;
   failed_cases: { case_id: string; failure_mode: string; answer_match: number }[];
 };

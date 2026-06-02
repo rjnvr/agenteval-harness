@@ -26,6 +26,8 @@ class EvalCase(Base):
     expected_facts_json: Mapped[str] = mapped_column(Text, nullable=False)
     expected_action: Mapped[str] = mapped_column(String, nullable=False)
     acceptable_actions_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    context_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    expected_decision_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
 
     document: Mapped[Document] = relationship(back_populates="cases")
 
@@ -67,6 +69,10 @@ class EvalResult(Base):
     schema_valid: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     judge_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     hallucination_score: Mapped[float] = mapped_column(Float, nullable=False)
+    slot_valid: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    preference_score: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    timezone_correct: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    proposed_slot: Mapped[str] = mapped_column(Text, default="", nullable=False)
     latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     cost_usd: Mapped[float] = mapped_column(Float, nullable=False)
     failure_type: Mapped[str] = mapped_column(String, nullable=False)

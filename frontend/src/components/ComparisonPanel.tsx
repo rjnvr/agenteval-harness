@@ -11,7 +11,7 @@ export function ComparisonPanel({ runs, onSelectRun }: { runs: ComparisonRun[]; 
     );
   }
   const bestPassRate = Math.max(...runs.map((run) => run.pass_rate));
-  const bestSemantic = Math.max(...runs.map((run) => run.avg_semantic_quality ?? run.avg_answer_match));
+  const bestDecision = Math.max(...runs.map((run) => run.avg_decision_correctness ?? run.pass_rate));
   return (
     <section className="panel comparisonPanel">
       <div className="panelHead"><h2>LLM Comparison</h2><span>{runs.length} recent runs</span></div>
@@ -22,7 +22,7 @@ export function ComparisonPanel({ runs, onSelectRun }: { runs: ComparisonRun[]; 
             <b>{run.model}</b>
             <strong>{pct(run.pass_rate)}</strong>
             <em>Strict pass</em>
-            <small>{pct(run.avg_semantic_quality ?? run.avg_answer_match)} answer quality - {pct(run.avg_grounding ?? run.avg_groundedness)} grounded</small>
+            <small>{pct(run.avg_preference_adherence ?? 0)} preferences - {pct(run.avg_timezone_accuracy ?? 0)} timezone</small>
           </button>
         ))}
       </div>
@@ -33,11 +33,11 @@ export function ComparisonPanel({ runs, onSelectRun }: { runs: ComparisonRun[]; 
               <th>Run</th>
               <th>Model</th>
               <th>Pass</th>
-              <th>Quality</th>
-              <th>Facts</th>
-              <th>Tools</th>
-              <th>Grounding</th>
-              <th>Retrieval</th>
+              <th>Decision</th>
+              <th>Constraints</th>
+              <th>Preferences</th>
+              <th>Timezone</th>
+              <th>Coverage</th>
               <th>Latency</th>
               <th>Cost</th>
               <th>Top Failure</th>
@@ -49,11 +49,11 @@ export function ComparisonPanel({ runs, onSelectRun }: { runs: ComparisonRun[]; 
                 <td><button className="textButton" onClick={() => onSelectRun(run.id)}>Run {run.id}</button><span>{new Date(run.created_at).toLocaleDateString()}</span></td>
                 <td><b>{providerLabel(run.provider)}</b><span>{run.model}</span></td>
                 <td><b className={run.pass_rate === bestPassRate ? "bestMetric" : ""}>{pct(run.pass_rate)}</b></td>
-                <td><b className={(run.avg_semantic_quality ?? run.avg_answer_match) === bestSemantic ? "bestMetric" : ""}>{pct(run.avg_semantic_quality ?? run.avg_answer_match)}</b></td>
-                <td>{pct(run.avg_fact_completeness ?? run.avg_fact_recall)}</td>
-                <td>{pct(run.avg_tool_accuracy ?? 0)}</td>
-                <td>{pct(run.avg_grounding ?? run.avg_groundedness)}</td>
-                <td>{pct(run.avg_retrieval_quality ?? 0)}</td>
+                <td><b className={(run.avg_decision_correctness ?? run.pass_rate) === bestDecision ? "bestMetric" : ""}>{pct(run.avg_decision_correctness ?? run.pass_rate)}</b></td>
+                <td>{pct(run.avg_constraint_satisfaction ?? 0)}</td>
+                <td>{pct(run.avg_preference_adherence ?? 0)}</td>
+                <td>{pct(run.avg_timezone_accuracy ?? 0)}</td>
+                <td>{pct(run.avg_coordination_coverage ?? run.avg_fact_recall)}</td>
                 <td>{Math.round(run.avg_latency_ms)} ms</td>
                 <td>{money(run.avg_cost_usd)}</td>
                 <td>{topFailure(run.failure_counts)}</td>

@@ -12,6 +12,7 @@ export function providerLabel(provider: string) {
   if (provider === "google") return "Gemini";
   if (provider === "openrouter") return "OpenRouter";
   if (provider === "webhook") return "BYO Agent";
+  if (provider === "naive") return "Naive";
   return "Mock";
 }
 

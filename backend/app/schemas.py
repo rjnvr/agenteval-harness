@@ -19,6 +19,8 @@ class EvalCaseOut(BaseModel):
     supporting_facts: list[str]
     expected_action: str
     acceptable_actions: list[str]
+    context: dict[str, object]
+    expected_decision: dict[str, object]
     document: DocumentOut
 
 
@@ -54,6 +56,8 @@ class CaseUploadCase(BaseModel):
     expected_facts: list[str | CaseUploadFact]
     expected_action: str
     acceptable_actions: list[str] | None = None
+    context: dict[str, object] = Field(default_factory=dict)
+    expected_decision: dict[str, object] = Field(default_factory=dict)
 
 
 class CaseUploadRequest(BaseModel):
@@ -103,6 +107,10 @@ class EvalResultOut(BaseModel):
     schema_valid: bool
     judge_score: float | None
     hallucination_score: float
+    slot_valid: bool
+    preference_score: float
+    timezone_correct: bool
+    proposed_slot: str
     unsupported_claims: list[str]
     latency_ms: int
     cost_usd: float

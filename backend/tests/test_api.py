@@ -33,7 +33,7 @@ def test_mock_run_and_summary() -> None:
     assert "failure_explanation" in first_result
     assert "trace" in first_result
     assert "score_breakdown" in first_result
-    assert first_result["score_breakdown"]["semantic_quality"] >= 0
+    assert first_result["score_breakdown"]["decision_correctness"] >= 0
     assert "calibration" in summary_response.json()
     assert "pii_redaction" in summary_response.json()
     assert "score_breakdown" in summary_response.json()
@@ -226,12 +226,12 @@ def test_webhook_agent_parses_response_via_stubbed_http(monkeypatch) -> None:
 
     case = SimpleNamespace(
         id="case_test",
-        input="Should the invoice be approved?",
-        expected_answer="Approve the invoice with note.",
-        expected_action="approve_invoice",
-        document=SimpleNamespace(id="doc_test", name="Invoice", category="finance"),
+        input="Book Sarah and Mark.",
+        expected_answer="Book 10 AM Pacific.",
+        expected_action="book_meeting",
+        document=SimpleNamespace(id="doc_test", name="Scheduling", category="multi_party_booking", text="Sarah and Mark are free at 10 AM Pacific."),
     )
-    document_text = "Invoice INV-001 total $500 approved by manager."
+    document_text = "Sarah and Mark are free at 10 AM Pacific."
 
     captured = {}
 
@@ -254,10 +254,11 @@ def test_webhook_agent_parses_response_via_stubbed_http(monkeypatch) -> None:
         captured["headers"] = dict(request.header_items())
         captured["body"] = _json.loads(request.data.decode("utf-8"))
         response_payload = {
-            "answer": case.expected_answer,
-            "action": case.expected_action,
-            "action_input": "covered",
-            "retrieved_chunks": ["chunk-from-webhook"],
+                "answer": case.expected_answer,
+                "action": case.expected_action,
+                "action_input": "10 AM Pacific",
+                "proposed_slot": {"start": "2026-06-12T10:00:00-07:00", "end": "2026-06-12T10:30:00-07:00"},
+                "retrieved_chunks": ["chunk-from-webhook"],
             "cost_usd": 0.0007,
         }
         return FakeResponse(_json.dumps(response_payload).encode("utf-8"))

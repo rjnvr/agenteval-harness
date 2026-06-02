@@ -5,7 +5,7 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Any
 
-from backend.app.rag import retrieve_chunks
+from backend.app.dataset import context_lines, expected_decision
 from backend.app.tools import SUPPORTED_ACTIONS
 
 WEBHOOK_TIMEOUT_SECONDS = 30.0
@@ -21,6 +21,7 @@ class AgentOutput:
     latency_ms: int
     cost_usd: float
     schema_valid: bool = True
+    proposed_slot: str = ""
 
 
 class AgentError(RuntimeError):
@@ -56,10 +57,20 @@ def _mock_answer(case: Any, facts: list[str]) -> tuple[str, str]:
     return answer, action_input
 
 
+def _slot_text(slot: Any) -> str:
+    if isinstance(slot, dict):
+        return json.dumps({"start": slot.get("start", ""), "end": slot.get("end", "")}, sort_keys=True)
+    return str(slot or "")
+
+
 def run_mock_agent(case: Any, document_text: str, facts: list[str]) -> AgentOutput:
     started = time.perf_counter()
-    chunks = retrieve_chunks(document_text, case.input)
+    chunks = context_lines(case)
+    decision = expected_decision(case)
     answer, action_input = _mock_answer(case, facts)
+    proposed_slot = _slot_text(decision.get("slot"))
+    if proposed_slot:
+        action_input = f"{action_input}; slot {proposed_slot}"
     return AgentOutput(
         answer=answer,
         action=case.expected_action,
@@ -67,6 +78,40 @@ def run_mock_agent(case: Any, document_text: str, facts: list[str]) -> AgentOutp
         retrieved_chunks=chunks,
         latency_ms=max(int((time.perf_counter() - started) * 1000), 1),
         cost_usd=0.0,
+        proposed_slot=proposed_slot,
+    )
+
+
+def run_naive_agent(case: Any, document_text: str, facts: list[str]) -> AgentOutput:
+    started = time.perf_counter()
+    chunks = context_lines(case)
+    naive_slots = {
+        "case_001": {"start": "2026-06-10T07:00:00-07:00", "end": "2026-06-10T07:30:00-07:00"},
+        "case_003": {"start": "2026-06-11T09:00:00+01:00", "end": "2026-06-11T09:30:00+01:00"},
+        "case_004": {"start": "2026-06-12T10:00:00-07:00", "end": "2026-06-12T10:30:00-07:00"},
+        "case_005": {"start": "2026-06-15T09:00:00-07:00", "end": "2026-06-15T09:30:00-07:00"},
+        "case_007": {"start": "2026-06-19T10:00:00-07:00", "end": "2026-06-19T10:30:00-07:00"},
+        "case_009": {"start": "2026-06-16T19:00:00-07:00", "end": "2026-06-16T19:30:00-07:00"},
+        "case_010": {"start": "2026-06-17T11:00:00-06:00", "end": "2026-06-17T11:30:00-06:00"},
+        "case_012": {"start": "2026-06-18T12:00:00-07:00", "end": "2026-06-18T12:30:00-07:00"},
+        "case_014": {"start": "2026-06-24T09:00:00-07:00", "end": "2026-06-24T09:30:00-07:00"},
+        "case_015": {"start": "2026-06-25T11:00:00-07:00", "end": "2026-06-25T11:30:00-07:00"},
+    }
+    decision = expected_decision(case)
+    slot = naive_slots.get(case.id, decision.get("slot") if isinstance(decision, dict) else None)
+    proposed_slot = _slot_text(slot)
+    action = "book_meeting" if proposed_slot else case.expected_action
+    if case.expected_action == "propose_alternative":
+        action = "propose_alternative"
+    answer = f"I will use the first obvious calendar opening. Key facts: {', '.join(facts[:1])}."
+    return AgentOutput(
+        answer=answer,
+        action=action,
+        action_input=f"first visible opening {proposed_slot}".strip(),
+        retrieved_chunks=chunks,
+        latency_ms=max(int((time.perf_counter() - started) * 1000), 1),
+        cost_usd=0.0,
+        proposed_slot=proposed_slot,
     )
 
 
@@ -99,6 +144,7 @@ def _parse_agent_json(raw: str) -> dict[str, str]:
         "answer": str(parsed.get("answer", "")).strip(),
         "action": action,
         "action_input": str(parsed.get("action_input", "")).strip(),
+        "proposed_slot": _slot_text(parsed.get("proposed_slot", "")),
     }
 
 
@@ -108,9 +154,10 @@ def _agent_prompt(case: Any, chunks: list[str]) -> dict[str, Any]:
         "question": case.input,
         "allowed_actions": sorted(SUPPORTED_ACTIONS),
         "instructions": (
-            "Answer only from the document context. Choose exactly one action. "
-            "Return strict JSON with keys answer, action, action_input. "
-            "The action_input should contain the key reason, amount, task, or item for that action."
+            "You are evaluating a coordination and scheduling request. Use only the assembled "
+            "calendar, timezone, participant, and preference context. Choose exactly one action. "
+            "Return strict JSON with keys answer, action, action_input, proposed_slot, reasoning. "
+            "proposed_slot should be {start,end} ISO datetimes with timezone offsets when the action proposes or books a time; otherwise use an empty string."
         ),
     }
 
@@ -124,7 +171,7 @@ def run_anthropic_agent(case: Any, document_text: str, model: str, api_key: str 
         raise AgentError("Anthropic provider requires an API key from the run request or ANTHROPIC_API_KEY.")
 
     started = time.perf_counter()
-    chunks = retrieve_chunks(document_text, case.input)
+    chunks = context_lines(case)
     client = Anthropic(api_key=api_key)
     try:
         response = client.messages.create(
@@ -146,6 +193,7 @@ def run_anthropic_agent(case: Any, document_text: str, model: str, api_key: str 
         retrieved_chunks=chunks,
         latency_ms=max(int((time.perf_counter() - started) * 1000), 1),
         cost_usd=estimate_claude_cost(input_tokens, output_tokens),
+        proposed_slot=parsed["proposed_slot"],
     )
 
 
@@ -162,7 +210,7 @@ def run_openai_agent(case: Any, document_text: str, model: str, api_key: str | N
         raise AgentError("OpenAI provider requires an API key from the run request or OPENAI_API_KEY.")
 
     started = time.perf_counter()
-    chunks = retrieve_chunks(document_text, case.input)
+    chunks = context_lines(case)
     client = OpenAI(api_key=api_key)
     try:
         response = client.chat.completions.create(
@@ -188,6 +236,7 @@ def run_openai_agent(case: Any, document_text: str, model: str, api_key: str | N
         retrieved_chunks=chunks,
         latency_ms=max(int((time.perf_counter() - started) * 1000), 1),
         cost_usd=estimate_openai_cost(model, input_tokens, output_tokens),
+        proposed_slot=parsed["proposed_slot"],
     )
 
 
@@ -200,7 +249,7 @@ def run_google_agent(case: Any, document_text: str, model: str, api_key: str | N
         raise AgentError("Google Gemini provider requires an API key for this run. Keys are never stored.")
 
     started = time.perf_counter()
-    chunks = retrieve_chunks(document_text, case.input)
+    chunks = context_lines(case)
     client = genai.Client(api_key=api_key)
     try:
         response = client.models.generate_content(
@@ -221,6 +270,7 @@ def run_google_agent(case: Any, document_text: str, model: str, api_key: str | N
         retrieved_chunks=chunks,
         latency_ms=max(int((time.perf_counter() - started) * 1000), 1),
         cost_usd=estimate_gemini_cost(input_tokens, output_tokens),
+        proposed_slot=parsed["proposed_slot"],
     )
 
 
@@ -233,7 +283,7 @@ def run_openrouter_agent(case: Any, document_text: str, model: str, api_key: str
         raise AgentError("OpenRouter provider requires an API key for this run. Keys are never stored.")
 
     started = time.perf_counter()
-    chunks = retrieve_chunks(document_text, case.input)
+    chunks = context_lines(case)
     client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
     try:
         response = client.chat.completions.create(
@@ -258,6 +308,7 @@ def run_openrouter_agent(case: Any, document_text: str, model: str, api_key: str
         retrieved_chunks=chunks,
         latency_ms=max(int((time.perf_counter() - started) * 1000), 1),
         cost_usd=0.0 if not (input_tokens or output_tokens) else estimate_openai_cost(model, input_tokens, output_tokens),
+        proposed_slot=parsed["proposed_slot"],
     )
 
 
@@ -274,7 +325,7 @@ def run_webhook_agent(
         raise AgentError("webhook_url must start with http:// or https://.")
 
     started = time.perf_counter()
-    chunks = retrieve_chunks(document_text, case.input)
+    chunks = context_lines(case)
     payload = {
         "case_id": case.id,
         "question": case.input,
@@ -285,6 +336,8 @@ def run_webhook_agent(
             "category": case.document.category,
             "text": document_text,
         },
+        "context": getattr(case, "context_json", "{}"),
+        "expected_decision": getattr(case, "expected_decision_json", "{}"),
         "retrieved_chunks": chunks,
     }
     body = json.dumps(payload).encode("utf-8")
@@ -336,11 +389,12 @@ def run_webhook_agent(
         retrieved_chunks=returned_chunks,
         latency_ms=max(int((time.perf_counter() - started) * 1000), 1),
         cost_usd=round(cost_usd, 6),
+        proposed_slot=parsed["proposed_slot"],
     )
 
 
 def judge_answer(provider: str, model: str, api_key: str | None, question: str, expected_answer: str, answer: str) -> float:
-    if provider == "mock":
+    if provider in {"mock", "naive"}:
         return 1.0
     if provider == "anthropic":
         try:

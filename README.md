@@ -1,77 +1,60 @@
-# AgentEval Harness: Evaluation System for RAG + Tool-Using AI Agents
+# AgentEval Harness: Evaluation System for Coordination & Scheduling Agents
 
-AgentEval Harness is a small full-stack evaluation system for document-based AI agents. It runs an agent against seeded business documents, checks the answer and selected action, and reports reliability metrics in a dashboard.
+AgentEval Harness is a full-stack evaluation system for AI scheduling and coordination agents. It runs golden coordination scenarios, checks whether the agent chose the right scheduling action, validates proposed slots against calendars and preferences, and reports failures in a dashboard.
 
-The default path uses deterministic mock mode, so the project runs locally without credentials. Live runs support Anthropic Claude and OpenAI models, using either a per-run key entered in the dashboard or a provider key from the local environment.
+The default `mock` provider is a competent deterministic coordinator and runs locally without credentials. The `naive` provider intentionally ignores preferences, timezones, and missing availability in selected cases so the dashboard can demonstrate real scheduling failure modes. Live runs support Anthropic, OpenAI, Google Gemini, OpenRouter, and a Bring-Your-Own-Agent webhook.
 
-New to evals? Read the [beginner evaluation guide](docs/evaluation-guide.md) for a ground-up explanation of the project, the dashboard, and each metric.
-
-## Screenshots
-
-![AgentEval dashboard summary](docs/images/dashboard-summary.png)
-
-![AgentEval failed case detail](docs/images/dashboard-case-detail.png)
+New to evals? Read the [beginner evaluation guide](docs/evaluation-guide.md).
 
 ## What It Measures
 
-The scoring pipeline is inspired by [RAGAS](https://docs.ragas.io/) and adapted for tool-using agents. Every case is scored on five orthogonal reliability axes so regressions have a *named* root cause instead of a single opaque pass/fail:
+The harness is aligned to coordination agents like Vela: assistants that are CC'd on email, SMS, WhatsApp, or Slack and must coordinate meetings from natural language while respecting context-specific preferences.
 
-| Axis | Metric (code) | RAGAS analogue | What it catches |
-| --- | --- | --- | --- |
-| **Faithfulness / Grounding** | `groundedness`, `hallucination_score`, `fact_precision` | Faithfulness | Claims, entities, or dollar amounts in the answer that aren't supported by the retrieved context. Money mismatches auto-flag as `fabricated_tool_output`. |
-| **Answer Relevance** | `answer_match` (`score_answer`), optional `judge_score` | Answer Relevance | Semantic overlap with the expected answer; optional LLM-judge upgrade. |
-| **Context Recall** | `retrieval_hit` | Context Recall | Whether the retrieved chunks actually contain the expected facts — isolates retrieval failures from generation failures. |
-| **Fact Completeness** | `fact_recall`, `fact_coverage` | Answer Correctness (recall side) | Coverage of expected key facts in the final answer. |
-| **Tool Accuracy** | `tool_correct`, `action_input_score` | (agent-specific extension) | Tool-selection correctness + argument quality; separates `wrong_tool` from `right_tool_wrong_args`. |
+| Axis | Metric fields | What it catches |
+| --- | --- | --- |
+| **Decision Correctness** | `tool_correct` | Wrong action: book vs propose times vs decline vs request availability vs reschedule. |
+| **Constraint Satisfaction** | `slot_valid`, `groundedness` | Double-booking, outside working hours, unknown availability, unsupported calendar claims. |
+| **Preference Adherence** | `preference_score` | Context-sensitive rules such as "John will take a 7 AM call with a CEO but not a peer." |
+| **Timezone Accuracy** | `timezone_correct` | Wrong timezone conversions or proposing 9 AM London when the request meant 9 AM Pacific. |
+| **Coordination Coverage** | `fact_recall`, `retrieval_hit` | Missing participants, calendars, preference rules, or required follow-ups. |
 
-Plus: JSON `schema_valid`, latency, estimated cost, and a 10-mode failure taxonomy (`wrong_tool`, `right_tool_wrong_args`, `premature_stop`, `unsupported_claim`, `fabricated_tool_output`, `missed_key_fact`, `retrieval_miss`, `schema_invalid`, `low_answer_quality`, `agent_error`) so every regression maps to a specific failure category.
-
-For plain-English definitions of every metric, see the [evaluation guide](docs/evaluation-guide.md#metric-reference). The scoring source is [`backend/app/evaluator.py`](backend/app/evaluator.py).
+Failure modes are scheduling-specific: `wrong_action`, `double_booking`, `outside_working_hours`, `preference_violation`, `timezone_error`, `missed_participant`, `premature_booking`, `no_followup`, `unsupported_availability`, `schema_invalid`, `agent_error`, and `low_answer_quality`.
 
 ## How Evaluation Works
 
-Each test case is a small "golden" example in `data/seed_cases.json`. The document text is the source of truth, and the expected fields are written from that document:
+Each case in `data/seed_cases.json` includes:
 
-- `expected_answer`: the concise answer the agent should give
-- `expected_facts`: the specific document facts that must be present or clearly represented in the answer
-- `expected_action`: the tool/action the agent should choose for the workflow
+- A natural-language scheduling request.
+- Structured context: participants, roles, timezones, working hours, busy blocks, availability status, constraints, and preference rules.
+- An expected decision: action plus a proposed slot, info needed, or decline reason.
+- Expected considerations the answer should mention.
 
-At runtime, the harness chunks the document, retrieves the most relevant chunks for the question using token overlap, and passes those chunks to the agent. The evaluator then compares the agent output against the golden case:
+At runtime, the harness assembles context lines from the scenario summary and structured calendars/preferences, sends them to the selected agent, and expects JSON:
 
-- `answer_match` checks overlap with the expected answer and required facts.
-- `fact_recall` checks how many required facts appeared in the answer.
-- `fact_precision` estimates how much of the answer is supported by the source document.
-- `retrieval_hit` checks whether the retrieved chunks contain the expected facts.
-- `groundedness` checks whether the answer is supported by the retrieved chunks.
-- `tool_correct` checks whether the selected action exactly matches `expected_action`.
-- `action_input_score` checks whether the tool/action argument includes the right reason, amount, item, or task.
-- `schema_valid` verifies that live model output used the required JSON shape.
-- `judge_score` is optional and asks the selected live model to grade semantic correctness. It is slower and costs more, so deterministic scoring remains the default.
-- `hallucination_score` looks for unsupported money amounts or important terms in the answer that do not appear in the source document.
-- `failure_type` summarizes the main issue, such as `missed_key_fact`, `wrong_action`, `hallucination`, or `agent_error`.
+```json
+{
+  "answer": "Propose 10:00-10:30 AM Pacific because John does not take 7 AM peer calls.",
+  "action": "propose_times",
+  "action_input": "10 AM Pacific; respects John's early-call preference",
+  "proposed_slot": {"start": "2026-06-10T10:00:00-07:00", "end": "2026-06-10T10:30:00-07:00"},
+  "reasoning": "All attendees are free and the CEO-only early exception does not apply."
+}
+```
 
-The retrieved context is shown in the run detail so a reviewer can see whether a failure came from retrieval, answer generation, or tool selection. For example, if the right chunk was retrieved but the answer missed a required fact, that points to an agent/prompt issue rather than a retrieval issue.
+The evaluator combines deterministic slot/preference/timezone checks with text coverage and grounding heuristics. Strict pass requires the right decision, a valid slot when one is proposed, full preference adherence, correct timezone handling, enough coordination coverage, and valid schema.
 
-## Interpreting Results
+## Why This Maps to Vela
 
-A low pass rate does not automatically mean the model is bad. The harness is intentionally strict: an answer can sound reasonable and still fail if it misses required facts, chooses the wrong workflow action, or adds unsupported details. That is the point of the project: it turns qualitative agent behavior into reviewable failure modes.
-
-For example, a Claude run may retrieve the right document context and answer the main question, but still fail because it omitted a cost component, deadline, policy threshold, or required action. The dashboard separates matched facts from missed facts so it is clear whether the issue came from retrieval, answer generation, or tool selection.
-
-## Resume Bullets
-
-- Built a RAGAS-inspired evaluation harness for RAG + tool-using AI agents, scoring 20+ golden cases across five reliability axes — **Faithfulness**, **Answer Relevance**, **Context Recall**, **Fact Completeness**, and **Tool Accuracy** — with a 10-mode failure taxonomy that pinpoints whether regressions come from retrieval, generation, or tool selection.
-- Designed deterministic grounding and hallucination detection (unsupported-entity and money-mismatch heuristics) plus an optional LLM-as-judge upgrade, exposed through a FastAPI + React dashboard that turns qualitative agent behavior into reviewable, per-case failure modes.
-- Shipped a Bring-Your-Own-Agent webhook so external teams can score their own agents against the same metrics without touching the codebase.
+Vela's hard problem is thousands of context-dependent coordination decisions per day. This harness makes those decisions testable: it can catch early-call preference violations, missing follow-ups, timezone mistakes, double-booking, and unsupported availability before an agent reaches paying customers. The webhook mode means an external scheduling agent can be scored without changing this repo.
 
 ## Architecture
 
-- `backend/app`: FastAPI API, SQLite/Postgres persistence, RAG retrieval, agent runners, scoring logic
-- `data/seed_cases.json`: 20 fake business documents and matching eval cases
-- `frontend/src`: Vite React dashboard for running and inspecting evals
-- `backend/tests`: dataset, evaluator, and API tests
+- `backend/app`: FastAPI API, SQLite/Postgres persistence, agent runners, context assembly, scoring logic.
+- `data/seed_cases.json`: 20 scheduling/coordination golden cases.
+- `frontend/src`: Vite React dashboard for running and inspecting evals.
+- `backend/tests`: dataset, evaluator, agent, and API tests.
 
-The app uses SQLite by default for local development. A deployed version should use hosted Postgres, such as Supabase or Neon, because Vercel serverless functions should not rely on local SQLite files for persistent storage. Set `AGENTEVAL_DATABASE_URL` to a Postgres connection string in production. For Vercel plus Supabase, use the Supabase transaction pooler connection string; the backend disables psycopg prepared statements for pooler URLs. The app intentionally ignores generic `DATABASE_URL` values so it does not accidentally connect to another local project database.
+SQLite is used by default locally. For production, set `AGENTEVAL_DATABASE_URL` to hosted Postgres such as Supabase or Neon.
 
 ## Backend Setup
 
@@ -82,14 +65,7 @@ pip install -e ".[dev]"
 uvicorn backend.app.main:app --reload
 ```
 
-The API will run at `http://localhost:8000`.
-
-Database migrations run automatically on API startup. For manual schema work, use Alembic:
-
-```bash
-alembic upgrade head
-alembic revision --autogenerate -m "describe change"
-```
+The API runs at `http://localhost:8000`. Database migrations run automatically on startup.
 
 ## Frontend Setup
 
@@ -99,11 +75,9 @@ npm install
 npm run dev
 ```
 
-The dashboard will run at `http://localhost:5173`.
+The dashboard runs at `http://localhost:5173`.
 
 ## Running Evals
-
-Mock provider is the default and works without credentials:
 
 ```bash
 curl -X POST http://localhost:8000/api/runs \
@@ -111,107 +85,51 @@ curl -X POST http://localhost:8000/api/runs \
   -d '{"provider":"mock"}'
 ```
 
-For long suites, request an async run and poll the status endpoint:
+Use `naive` to demonstrate the harness catching failures:
 
 ```bash
 curl -X POST http://localhost:8000/api/runs \
   -H "Content-Type: application/json" \
-  -d '{"provider":"mock","async_run":true}'
-
-curl http://localhost:8000/api/runs/1/status
+  -d '{"provider":"naive"}'
 ```
 
-Live providers can be selected from the dashboard or requested from the API with `provider` set to `anthropic` or `openai`. You can pass `model`, optional `case_ids`, and `judge_enabled`. API keys are read in this order: per-run key from the dashboard or API request first, then the matching environment variable. Per-run keys are not stored in the database.
+Live providers can be selected in the dashboard or requested with `provider` set to `anthropic`, `openai`, `google`, or `openrouter`. Per-run API keys are accepted and are not stored.
 
-## Bring Your Own Agent (Webhook)
+## Bring Your Own Agent
 
-External teams can score their own agent against the same harness without changing this codebase. Set `provider` to `webhook` and pass a `webhook_url` (and optional `webhook_headers` for auth). The harness POSTs each case to your endpoint and applies the same scoring pipeline to the response.
+Set `provider` to `webhook` and pass `webhook_url`. The harness posts each scheduling case and scores your response with the same pipeline.
 
 ```bash
 curl -X POST http://localhost:8000/api/runs \
   -H "Content-Type: application/json" \
   -d '{
     "provider": "webhook",
-    "webhook_url": "https://your-agent.example.com/run",
+    "webhook_url": "https://your-scheduler.example.com/run",
     "webhook_headers": {"Authorization": "Bearer YOUR_TOKEN"},
-    "case_ids": ["case_001", "case_002"]
+    "case_ids": ["case_001", "case_003"]
   }'
 ```
 
-The dashboard exposes the same option under the **BYO Agent** provider tab. Headers can be entered as a JSON object or as `Header: value` lines.
-
-### Webhook request contract
-
-Each case results in one `POST` to `webhook_url` with `Content-Type: application/json` and any headers you supplied:
-
-```json
-{
-  "case_id": "case_001",
-  "question": "Should the warranty claim be approved?",
-  "allowed_actions": ["approve_invoice", "create_task", "escalate_compliance_review", "flag_cost_risk", "flag_risk", "request_more_info"],
-  "document": {
-    "id": "doc_001",
-    "name": "Warranty Claim - Order 8821",
-    "category": "support",
-    "text": "Full document text the agent should reason over..."
-  },
-  "retrieved_chunks": ["chunks retrieved by the harness as a hint - optional to use"]
-}
-```
-
-### Webhook response contract
-
-Respond within 30 seconds (max 1MB) with strict JSON:
-
-```json
-{
-  "answer": "Plain-text answer for the user, grounded in the document.",
-  "action": "request_more_info",
-  "action_input": "missing receipts and serial number",
-  "retrieved_chunks": ["any chunks your agent actually used - optional"],
-  "cost_usd": 0.0021
-}
-```
-
-- `answer`, `action`, and `action_input` are required.
-- `action` must be one of `allowed_actions`. Otherwise the case is recorded as `agent_error`.
-- `retrieved_chunks` is optional; if omitted the harness uses the chunks it sent you, so grounding/retrieval metrics still work.
-- `cost_usd` is optional and only used for the cost display.
-
-Non-2xx responses, timeouts, or invalid JSON are scored as `agent_error` for that case so a single broken endpoint does not abort the run. The webhook URL and headers are sent per request and are never persisted.
-
-Environment variables used by live providers:
-
-- `ANTHROPIC_API_KEY`
-- `OPENAI_API_KEY`
-- `AGENTEVAL_DATABASE_URL`
+Webhook responses must include `answer`, `action`, and `action_input`. Include `proposed_slot` for `propose_times`, `book_meeting`, and `propose_alternative`.
 
 ## API
 
-- `GET /api/cases`: list seeded eval cases
-- `POST /api/runs`: run all cases or selected case IDs with `provider=mock|anthropic|openai`
-- `GET /api/runs`: list recent eval runs
-- `GET /api/runs/{run_id}`: inspect one run and its case results
-- `GET /api/runs/{run_id}/status`: poll queued/running/completed/failed run status and partial results
-- `GET /api/summary`: latest dashboard summary
+- `GET /api/cases`: list seeded scheduling cases.
+- `POST /api/runs`: run cases with `provider=mock|naive|anthropic|openai|google|openrouter|webhook`.
+- `GET /api/runs`: list recent eval runs.
+- `GET /api/runs/{run_id}`: inspect results and assembled context.
+- `GET /api/runs/{run_id}/status`: poll async run status.
+- `GET /api/summary`: latest dashboard summary.
 
 ## Testing
 
 ```bash
 pytest
+cd frontend && npm run build
 ```
 
-The test suite covers seed data loading, scoring behavior, mock-provider runs, multi-provider request handling, and the core API endpoints.
+## Resume Bullets
 
-## Deploying to Vercel
-
-This repo includes `vercel.json` and `api/index.py` so the Vite frontend and FastAPI backend can be deployed as one Vercel project. For persistence, create a hosted Postgres database in Supabase or Neon and add its connection string as `AGENTEVAL_DATABASE_URL` in Vercel project settings. Add `ANTHROPIC_API_KEY` and/or `OPENAI_API_KEY` only if you want server-side live-provider credentials.
-
-Deployment flow:
-
-1. Create a Supabase or Neon Postgres database.
-2. Copy the Supabase transaction pooler connection string and add it to Vercel as `AGENTEVAL_DATABASE_URL`.
-3. Optionally add `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`.
-4. Import this GitHub repo into Vercel and deploy.
-
-The MVP keeps runs synchronous. Vercel functions can time out on long live full-suite runs, so use selected `case_ids` for small live demos. A production version should move long eval suites to a background worker or queue and manage schema changes with migrations such as Alembic.
+- Repurposed AgentEval into a coordination-agent eval harness with 20 scheduling golden cases, scoring **Decision Correctness**, **Constraint Satisfaction**, **Preference Adherence**, **Timezone Accuracy**, and **Coordination Coverage**.
+- Built deterministic validators for double-booking, working-hours violations, context-sensitive preferences, missing availability follow-ups, and timezone conversion errors.
+- Shipped `mock`, `naive`, live-provider, and BYO-webhook modes so external scheduling agents can be evaluated against the same failure taxonomy.

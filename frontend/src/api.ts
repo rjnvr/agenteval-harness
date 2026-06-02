@@ -4,6 +4,7 @@ const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.PROD ? "" : "
 
 export const DEFAULT_MODELS: Record<Provider, string> = {
   mock: "mock-deterministic",
+  naive: "naive-scheduler",
   anthropic: "claude-sonnet-4-20250514",
   openai: "gpt-4o-mini",
   google: "gemini-2.5-flash",

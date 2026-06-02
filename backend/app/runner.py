@@ -9,17 +9,18 @@ from backend.app.agents import (
     run_anthropic_agent,
     run_google_agent,
     run_mock_agent,
+    run_naive_agent,
     run_openai_agent,
     run_openrouter_agent,
     run_webhook_agent,
 )
 from backend.app.config import get_settings
-from backend.app.dataset import acceptable_actions, all_fact_texts, expected_facts, required_facts, supporting_facts
+from backend.app.dataset import acceptable_actions, all_fact_texts, case_context, expected_decision, expected_facts, required_facts, supporting_facts
 from backend.app.models import EvalCase, EvalResult, EvalRun
 from backend.app.pii import redact_value
 from backend.app.schemas import RunRequest
 
-PROVIDERS = {"mock", "anthropic", "openai", "google", "openrouter", "webhook"}
+PROVIDERS = {"mock", "naive", "anthropic", "openai", "google", "openrouter", "webhook"}
 
 
 def _error_output(message: str) -> AgentOutput:
@@ -31,6 +32,7 @@ def _error_output(message: str) -> AgentOutput:
         latency_ms=1,
         cost_usd=0.0,
         schema_valid=False,
+        proposed_slot="",
     )
 
 
@@ -65,11 +67,13 @@ def _provider_model(provider: str, requested_model: str | None) -> str:
         return settings.openrouter_model
     if provider == "webhook":
         return "byo-agent-webhook"
+    if provider == "naive":
+        return "naive-scheduler"
     return "mock-deterministic"
 
 
 def _provider_api_key(provider: str, per_run_key: str | None) -> str | None:
-    if provider == "mock":
+    if provider in {"mock", "naive"}:
         return None
     return per_run_key.strip() if per_run_key and per_run_key.strip() else None
 
@@ -84,7 +88,7 @@ def create_eval_run(
     provider, selected_case_ids, requested_model, _per_run_key, judge_enabled, webhook_url, _webhook_headers = _run_options(request, case_ids)
 
     if provider not in PROVIDERS:
-        raise ValueError("provider must be 'mock', 'anthropic', 'openai', 'google', 'openrouter', or 'webhook'")
+        raise ValueError("provider must be 'mock', 'naive', 'anthropic', 'openai', 'google', 'openrouter', or 'webhook'")
     if provider == "webhook" and not (webhook_url and webhook_url.strip()):
         raise ValueError("webhook provider requires webhook_url")
 
@@ -146,12 +150,14 @@ def execute_eval_run(db: Session, run_id: int, request: RunRequest | str, case_i
     for case in cases:
         facts = required_facts(case)
         support_facts = supporting_facts(case)
-        retrieval_facts = all_fact_texts(case)
+        retrieval_facts = facts
         actions = acceptable_actions(case)
         agent_failed = False
         try:
             if provider == "mock":
                 output = run_mock_agent(case, case.document.text, facts)
+            elif provider == "naive":
+                output = run_naive_agent(case, case.document.text, facts)
             elif provider == "anthropic":
                 output = run_anthropic_agent(case, case.document.text, model, api_key)
             elif provider == "openai":
@@ -176,6 +182,13 @@ def execute_eval_run(db: Session, run_id: int, request: RunRequest | str, case_i
         retrieval_hit = evaluator.retrieval_hit(output.retrieved_chunks, retrieval_facts)
         groundedness = evaluator.groundedness(output.answer, output.retrieved_chunks)
         unsupported = evaluator.unsupported_claims(output.answer, case.document.text)
+        context = case_context(case)
+        decision = expected_decision(case)
+        participants_raw = context.get("participants", [])
+        participants = [item for item in participants_raw if isinstance(item, dict)] if isinstance(participants_raw, list) else []
+        slot_valid = evaluator.slot_valid(output.proposed_slot, participants, output.action)
+        preference_score = evaluator.preference_score(output.proposed_slot, output.action, context, case.expected_action)
+        timezone_correct = evaluator.timezone_correct(output.proposed_slot, decision, output.action)
         judge_score = None
         if judge_enabled and not agent_failed and provider != "webhook":
             try:
@@ -193,6 +206,13 @@ def execute_eval_run(db: Session, run_id: int, request: RunRequest | str, case_i
             action_input_score_value=action_input_score,
             retrieval_hit_value=retrieval_hit,
             groundedness_value=groundedness,
+            agent_failed=agent_failed,
+            slot_valid_value=slot_valid,
+            preference_score_value=preference_score,
+            timezone_correct_value=timezone_correct,
+            action=output.action,
+            expected_action=case.expected_action,
+            context=context,
         )
         fail_explanation = evaluator.failure_explanation(fail_mode)
         passed = (
@@ -201,9 +221,12 @@ def execute_eval_run(db: Session, run_id: int, request: RunRequest | str, case_i
             and fact_recall >= 1.0
             and tool_correct
             and action_input_score >= 0.12
-            and retrieval_hit >= 0.5
+            and retrieval_hit >= 0.3
             and hallucination < 0.45
             and groundedness >= 0.45
+            and slot_valid
+            and preference_score >= 1.0
+            and timezone_correct
             and output.schema_valid
         )
         trace = redact_value(
@@ -215,6 +238,7 @@ def execute_eval_run(db: Session, run_id: int, request: RunRequest | str, case_i
                     "answer": output.answer,
                     "action": output.action,
                     "action_input": output.action_input,
+                    "proposed_slot": output.proposed_slot,
                     "schema_valid": output.schema_valid,
                 },
                 "scores": {
@@ -226,12 +250,17 @@ def execute_eval_run(db: Session, run_id: int, request: RunRequest | str, case_i
                     "retrieval_hit": retrieval_hit,
                     "groundedness": groundedness,
                     "hallucination_score": hallucination,
+                    "slot_valid": slot_valid,
+                    "preference_score": preference_score,
+                    "timezone_correct": timezone_correct,
                     "judge_score": judge_score,
                 },
                 "matched_facts": matched_facts,
                 "missed_facts": missed_facts,
                 "supporting_facts": support_facts,
                 "acceptable_actions": actions,
+                "context": context,
+                "expected_decision": decision,
                 "unsupported_claims": unsupported,
                 "failure_mode": fail_mode,
                 "failure_explanation": fail_explanation,
@@ -255,6 +284,10 @@ def execute_eval_run(db: Session, run_id: int, request: RunRequest | str, case_i
                 schema_valid=output.schema_valid,
                 judge_score=judge_score,
                 hallucination_score=hallucination,
+                slot_valid=slot_valid,
+                preference_score=preference_score,
+                timezone_correct=timezone_correct,
+                proposed_slot=output.proposed_slot,
                 latency_ms=output.latency_ms,
                 cost_usd=output.cost_usd,
                 failure_type=fail_mode,

@@ -1,217 +1,139 @@
 # AgentEval Evaluation Guide
 
-This guide explains AgentEval from the ground up. It is written for readers who understand basic software concepts but are new to RAG systems, tool-using agents, and evaluation metrics.
+This guide explains the scheduling version of AgentEval. It is written for readers who are new to agent evaluation but understand basic software concepts.
 
 ## What AgentEval Is Evaluating
 
-AgentEval tests a document-based AI agent. The agent receives a business document, a question, and a short list of allowed workflow actions. It must do two things:
+AgentEval tests an AI coordination agent. The agent receives a scheduling request, assembled context, and a list of allowed actions. It must:
 
-1. Answer the question using only the document.
-2. Pick the right action for the workflow.
+1. Understand the request.
+2. Use participant calendars, timezones, working hours, and preferences.
+3. Choose the correct scheduling action.
+4. Return a supported slot when a slot is appropriate.
 
-For example, a document might describe an invoice, insurance claim, contract, construction change order, or compliance note. The agent might need to approve an invoice, request more information, flag a cost risk, or escalate a compliance review.
+Example actions are `propose_times`, `book_meeting`, `decline`, `propose_alternative`, `request_availability`, and `escalate_to_human`.
 
-The point of the harness is not just to ask "did the answer sound good?" It checks whether the answer was grounded in the source document, whether the right facts were included, whether the right tool/action was selected, and whether the result can be inspected later.
+The point is not just whether the answer sounds reasonable. The harness checks whether the agent made the right coordination decision and whether that decision is safe to execute.
 
 ## Golden Test Cases
 
-Each test case in `data/seed_cases.json` is a golden example. A golden example is a case where the expected behavior is already known.
+Each case in `data/seed_cases.json` is a known-good scheduling scenario. A case includes:
 
-Each case has:
+- `input`: the natural-language request.
+- `expected_answer`: the concise answer the agent should give.
+- `expected_facts`: coordination considerations the answer should cover.
+- `expected_action`: the correct scheduling decision.
+- `context`: structured participants, calendars, working hours, timezones, availability status, and preference rules.
+- `expected_decision`: the expected slot, follow-up, or decline reason.
 
-- `input`: the question given to the agent.
-- `expected_answer`: the concise answer the agent should produce.
-- `expected_facts`: the facts from the document that must appear in the answer.
-- `expected_action`: the workflow action the agent should choose.
-
-The document text is the source of truth. If a fact is not in the document, the agent should not invent it.
+The 20 seeded cases include preference traps, timezone spread, double-booking traps, missing availability, reschedules, and hard declines.
 
 ## How A Run Works
 
-An evaluation run follows the same basic path for every case:
+1. The backend loads a golden case.
+2. The context layer assembles scenario, participant, calendar, timezone, and preference lines.
+3. The selected provider receives the request, allowed actions, and assembled context.
+4. The provider returns JSON with `answer`, `action`, `action_input`, and optional `proposed_slot`.
+5. The evaluator checks the output against the expected decision.
+6. The dashboard shows pass/fail, failure mode, metrics, proposed slot, and assembled context.
 
-1. The backend loads a document and its golden test case.
-2. The retrieval layer splits the document into chunks.
-3. The retrieval layer selects the chunks that overlap most with the user question.
-4. The agent receives the question, retrieved chunks, and allowed actions.
-5. The agent returns JSON with an `answer`, `action`, and `action_input`.
-6. The evaluator compares the agent output with the golden case.
-7. The dashboard shows scores, failures, retrieved context, and the agent output.
+`mock` is a competent deterministic coordinator. `naive` intentionally ignores important context so the dashboard can show failures without API keys.
 
-Mock mode uses deterministic local behavior, so the project runs without API keys. Live mode can call Anthropic Claude or OpenAI models if credentials are provided.
-
-## Reading The Dashboard
-
-The dashboard starts with run-level metrics:
-
-- Tests run: how many case results have been recorded.
-- Pass rate: the share of cases that met all pass criteria.
-- Average latency: the average time per case.
-- Average cost: the estimated model cost per case.
-
-The failed cases table is the best place to debug behavior. Expand a failed row to inspect:
-
-- the original question
-- the expected answer and expected action
-- the actual agent answer and action
-- matched facts and missed facts
-- unsupported claims
-- retrieved document chunks
-- metric scores for that case
-
-This helps separate different problems. If the retrieved context did not include the key facts, the retrieval step likely failed. If the right context was retrieved but the answer missed facts, the agent output likely failed. If the answer is good but the action is wrong, the tool-selection behavior needs work.
-
-## Metric Reference
-
-### `answer_match`
-
-Measures how closely the agent answer matches the expected answer and required facts.
-
-Higher is better. A high score means the answer used many of the same important terms and covered the expected facts. A low score means the answer missed important content or answered a different question.
-
-### `fact_recall`
-
-Measures how many required facts appeared in the answer.
-
-If a case has three expected facts and the answer includes all three, fact recall is `1.0`. If it includes only one, fact recall is about `0.33`.
-
-This is useful because an answer can sound reasonable while still omitting a required amount, deadline, missing document, or policy condition.
-
-### `fact_precision`
-
-Estimates how much of the answer is supported by the source document.
-
-Higher is better. A low score means the answer contains unsupported terms or money amounts. In this project, fact precision is closely related to the hallucination check.
-
-### `tool_correct`
-
-Checks whether the selected action exactly matches `expected_action`.
-
-This is a strict true/false metric. If the expected action is `request_more_info` and the agent selects `flag_risk`, the tool is wrong even if the written answer is mostly correct.
-
-### `action_input_score`
-
-Checks whether the argument passed to the selected action includes the right reason, amount, item, or task.
-
-For example, selecting `request_more_info` is not enough. The agent should also say what information is missing, such as photos, an invoice, or a security report.
-
-### `retrieval_hit`
-
-Measures whether the retrieved chunks contain the expected facts.
-
-This helps diagnose retrieval problems. If `retrieval_hit` is low, the agent may not have received the right source text. If `retrieval_hit` is high but the answer is bad, the issue is more likely in the agent's reasoning or response formatting.
-
-### `groundedness`
-
-Measures whether the answer is supported by the retrieved chunks.
-
-This differs from fact precision because it uses only the retrieved context, not the full document. A low groundedness score means the answer included details that were not present in the context actually given to the agent.
-
-### `schema_valid`
-
-Checks whether live model output followed the required JSON shape.
-
-The harness expects:
+## Required JSON Shape
 
 ```json
 {
   "answer": "string",
   "action": "supported_action",
-  "action_input": "string"
+  "action_input": "string",
+  "proposed_slot": {"start": "2026-06-10T10:00:00-07:00", "end": "2026-06-10T10:30:00-07:00"},
+  "reasoning": "string"
 }
 ```
 
-If the model returns prose, invalid JSON, missing fields, or an unsupported action, `schema_valid` is false and the case is treated as an agent error.
+`proposed_slot` should be present for `propose_times`, `book_meeting`, and `propose_alternative`. It should use ISO datetimes with timezone offsets.
 
-### `judge_score`
+## Metric Reference
 
-An optional LLM-as-judge score for semantic correctness.
+### Decision Correctness
 
-When enabled for live providers, the selected model grades the agent answer against the expected answer and returns a score between `0` and `1`. This can catch meaning that simple token overlap misses, but it is slower, costs more, and depends on the judge model. Deterministic scoring remains the default.
+Backed by `tool_correct`.
 
-### `hallucination_score`
+Checks whether the agent chose the right scheduling action. Booking when it should request availability is a decision failure, even if the message is polite.
 
-Looks for unsupported money amounts or important terms in the answer that do not appear in the source document.
+### Constraint Satisfaction
 
-Higher is worse. A score near `1.0` means the answer likely invented information, such as a dollar amount that was not in the document.
+Backed by `slot_valid` and `groundedness`.
 
-### Latency
+Checks whether a proposed slot is free for every participant, within working hours, and supported by the assembled context. This catches double-booking, outside-hours scheduling, and invented availability.
 
-The time it took to run the agent for a case, measured in milliseconds.
+### Preference Adherence
 
-Latency is useful for comparing providers and prompts, but a fast wrong answer is still a failure. Treat latency as an operational metric, not a quality metric.
+Backed by `preference_score`.
 
-### Cost
+Checks context-sensitive rules. The signature example is: John will take a 7 AM call with a CEO, but not with a peer. A valid calendar slot can still fail if it violates this preference.
 
-The estimated model cost for a case.
+### Timezone Accuracy
 
-Mock runs cost `$0.0000`. Live runs estimate cost from token usage and provider pricing assumptions in the backend.
+Backed by `timezone_correct`.
 
-### Pass Or Fail
+Checks whether the proposed slot represents the expected instant. This catches mistakes like interpreting "Thursday morning Pacific" as 9 AM London.
 
-A case passes only when the main quality gates pass together:
+### Coordination Coverage
 
-- answer quality is high enough
-- all expected facts are recalled
-- the selected tool/action is correct
-- action input has enough relevant detail
-- retrieval found enough expected facts
-- hallucination risk is low
-- groundedness is high enough
-- output schema is valid
+Backed by `fact_recall` and `retrieval_hit`.
 
-This makes the harness strict by design. The goal is to find reliability problems, not to give partial credit to answers that would still be risky in a workflow.
+Checks whether the agent considered the required participants, preferences, calendars, and follow-ups. A low score often means the agent missed a relevant person or constraint.
 
-### `failure_type`
+### Schema Validity
 
-Summarizes the main reason a case failed.
+Backed by `schema_valid`.
 
-Current values include:
+Checks whether live model or webhook output followed the JSON contract. Invalid JSON, missing fields, or unsupported actions fail this gate.
 
-- `missed_key_fact`: the answer left out required document facts.
-- `wrong_action`: the selected workflow action was wrong or the action input was too weak.
-- `hallucination`: the answer added unsupported information.
-- `agent_error`: the model call failed or the output schema was invalid.
-- `low_answer_match`: the answer did not match the expected answer closely enough.
-- `none`: no failure was detected.
+### Latency And Cost
 
-The failure type is a shortcut for triage. The expanded case details show the evidence behind the label.
+Latency is measured per case in milliseconds. Cost is estimated from provider token usage where available. These are operational metrics; they do not compensate for unsafe scheduling decisions.
 
-## Common Failure Examples
+## Failure Modes
 
-### The Right Answer With The Wrong Action
+The failure taxonomy is scheduling-specific:
 
-The agent correctly explains that an invoice is missing a purchase order, but selects `approve_invoice` instead of `request_more_info`.
+- `wrong_action`: the agent chose the wrong scheduling decision.
+- `double_booking`: the proposed slot overlaps a busy block or fails working-hour constraints.
+- `outside_working_hours`: the proposed slot is outside a participant's allowed hours.
+- `preference_violation`: the agent ignored a contextual rule.
+- `timezone_error`: the proposed instant or conversion is wrong.
+- `missed_participant`: the agent missed a participant or required consideration.
+- `premature_booking`: the agent booked before enough availability was known.
+- `no_followup`: the agent should have requested availability but did not.
+- `unsupported_availability`: the agent claimed a slot was supported when context did not support it.
+- `schema_invalid`: the response was not parseable or used an unsupported action.
+- `agent_error`: provider or webhook execution failed.
+- `low_answer_quality`: the answer did not match the expected decision well enough.
 
-This is a tool-use failure. The language answer may be useful, but the workflow action would do the wrong thing.
+## Reading A Failed Case
 
-### The Right Context With Missing Facts
+Expand a failed row in the dashboard and inspect:
 
-The retrieved context includes the missing invoice, late submission, and missing photos, but the answer mentions only the late submission.
+- Expected action and expected answer.
+- Agent answer, action, action input, and proposed slot.
+- Slot validity, preference score, timezone correctness, context hit, and coverage.
+- Matched and missed considerations.
+- Assembled context lines.
+- Failure rationale.
 
-This is an answer-generation failure. Retrieval worked, but the agent did not use all required facts.
-
-### A Plausible But Unsupported Amount
-
-The document says the cost increase is `$18,500`, but the answer says `$19,000`.
-
-This is a hallucination or grounding failure. Even a small unsupported amount matters in business workflows.
-
-### Invalid JSON From A Live Model
-
-The model returns a paragraph instead of the required JSON object.
-
-This is a schema failure. The app cannot reliably parse the answer, action, and action input.
+This separates common root causes. If context hit is high but preference adherence is low, the agent saw the rule and ignored it. If timezone accuracy is low, the issue is conversion or representation. If slot validity is false, inspect busy blocks and working hours.
 
 ## How To Use The Metrics Together
 
-No single metric tells the full story. Read them as a chain:
+Read the metrics as a chain:
 
-1. Did retrieval find the right evidence? Check `retrieval_hit`.
-2. Did the answer use that evidence? Check `fact_recall`, `answer_match`, and `groundedness`.
-3. Did the answer avoid invented information? Check `fact_precision` and `hallucination_score`.
-4. Did the agent choose the right workflow action? Check `tool_correct` and `action_input_score`.
-5. Did the model return machine-readable output? Check `schema_valid`.
-6. How expensive or slow was the run? Check cost and latency.
+1. Did the agent receive the right context? Check context hit.
+2. Did it choose the right decision? Check decision correctness.
+3. If it proposed a time, is the slot legal? Check constraint satisfaction.
+4. Did it honor preferences? Check preference adherence.
+5. Did it convert timezones correctly? Check timezone accuracy.
+6. Did it explain the relevant considerations? Check coordination coverage.
 
-That chain is what makes AgentEval useful: it turns an agent's behavior into specific, inspectable failure modes.
+That chain is what makes the harness useful: it turns vague scheduling behavior into specific, inspectable failures.

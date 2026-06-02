@@ -55,7 +55,7 @@ export function App() {
   function selectProvider(nextProvider: Provider) {
     setProvider(nextProvider);
     setModel(DEFAULT_MODELS[nextProvider]);
-    if (nextProvider === "mock") setApiKey("");
+    if (nextProvider === "mock" || nextProvider === "naive") setApiKey("");
   }
 
   const refresh = useCallback(async () => {
@@ -77,7 +77,7 @@ export function App() {
       const payload = {
         provider,
         model: model.trim() || DEFAULT_MODELS[provider],
-        api_key: provider === "mock" || provider === "webhook" || !apiKey.trim() ? undefined : apiKey.trim(),
+        api_key: provider === "mock" || provider === "naive" || provider === "webhook" || !apiKey.trim() ? undefined : apiKey.trim(),
         judge_enabled: provider === "webhook" ? false : judgeEnabled,
         async_run: true,
         webhook_url: provider === "webhook" ? webhookUrl.trim() : undefined,
@@ -109,7 +109,7 @@ export function App() {
       const payload = {
         provider,
         model: model.trim() || DEFAULT_MODELS[provider],
-        api_key: provider === "mock" || !apiKey.trim() ? undefined : apiKey.trim(),
+        api_key: provider === "mock" || provider === "naive" || !apiKey.trim() ? undefined : apiKey.trim(),
       };
       const nextSummary = await api<EvalSummary>("/api/runs/latest/summary", { method: "POST", body: JSON.stringify(payload) });
       setEvalSummary(nextSummary);
@@ -133,11 +133,12 @@ export function App() {
       <header className="topbar">
         <div>
           <h1>AgentEval Harness</h1>
-          <p>Evaluation dashboard for RAG and tool-using document agents.</p>
+          <p>Evaluation dashboard for coordination and scheduling agents.</p>
         </div>
         <div className="controls">
           <div className="segmented" aria-label="Provider">
             <button className={provider === "mock" ? "active" : ""} onClick={() => selectProvider("mock")}>Mock</button>
+            <button className={provider === "naive" ? "active" : ""} onClick={() => selectProvider("naive")}>Naive</button>
             <button className={provider === "anthropic" ? "active" : ""} onClick={() => selectProvider("anthropic")}>Claude</button>
             <button className={provider === "openai" ? "active" : ""} onClick={() => selectProvider("openai")}>OpenAI</button>
             <button className={provider === "google" ? "active" : ""} onClick={() => selectProvider("google")}>Gemini</button>
@@ -145,7 +146,7 @@ export function App() {
             <button className={provider === "webhook" ? "active" : ""} onClick={() => selectProvider("webhook")}>BYO Agent</button>
           </div>
           <input className="modelInput" value={model} onChange={(event) => setModel(event.target.value)} aria-label="Model name" />
-          {provider !== "mock" && provider !== "webhook" && (
+          {provider !== "mock" && provider !== "naive" && provider !== "webhook" && (
             <label className="keyField">
               <KeyRound size={15} />
               <input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={`${providerLabel(provider)} API key for this run`} aria-label="API key for this run" />
@@ -184,7 +185,7 @@ export function App() {
             <button className="judgeInfo" type="button" aria-label="What LLM Judge does">
               <Info size={17} />
               <span className="judgePopup" role="tooltip">
-                Runs an extra model call to score semantic correctness against the expected answer. It helps catch fuzzy answer quality, but can add latency and provider cost.
+                Runs an extra model call to score semantic correctness against the expected scheduling decision. It helps catch fuzzy answer quality, but can add latency and provider cost.
               </span>
             </button>
           </div>
@@ -211,11 +212,11 @@ export function App() {
           <h2>Latest run quality signals</h2>
         </div>
         <div className="qualityGrid">
-          <QualitySignal label="Answer quality" value={summary?.score_breakdown?.semantic_quality ?? 0} helper="Semantic match or judge score" />
-          <QualitySignal label="Fact completeness" value={summary?.score_breakdown?.fact_completeness ?? 0} helper="Required facts included" />
-          <QualitySignal label="Tool accuracy" value={summary?.score_breakdown?.tool_accuracy ?? 0} helper="Action and arguments" />
-          <QualitySignal label="Grounding" value={summary?.score_breakdown?.grounding ?? 0} helper="Supported by context" />
-          <QualitySignal label="Retrieval" value={summary?.score_breakdown?.retrieval_quality ?? 0} helper="Expected facts retrieved" />
+          <QualitySignal label="Decision correctness" value={summary?.score_breakdown?.decision_correctness ?? 0} helper="Right scheduling action" />
+          <QualitySignal label="Constraint satisfaction" value={summary?.score_breakdown?.constraint_satisfaction ?? 0} helper="Calendars and working hours" />
+          <QualitySignal label="Preference adherence" value={summary?.score_breakdown?.preference_adherence ?? 0} helper="Context-sensitive rules" />
+          <QualitySignal label="Timezone accuracy" value={summary?.score_breakdown?.timezone_accuracy ?? 0} helper="Slot conversion correctness" />
+          <QualitySignal label="Coordination coverage" value={summary?.score_breakdown?.coordination_coverage ?? 0} helper="Participants and considerations" />
         </div>
       </section>
 
@@ -223,7 +224,7 @@ export function App() {
         <div>
           <span className="eyebrow">Latest Run Summary</span>
           <h2>Explain the eval results</h2>
-          <p>Generate a concise readout of the latest run, including what passed, what failed, failure patterns, and next steps.</p>
+          <p>Generate a concise readout of the latest run, including scheduling decisions, preference failures, timezone issues, and next steps.</p>
         </div>
         <button className="summaryButton" onClick={summarizeLatestRun} disabled={summaryLoading || !summary?.latest_run}>
           <Sparkles size={17} />{summaryLoading ? "Summarizing" : "Summarize latest run"}
@@ -247,7 +248,7 @@ export function App() {
           <div className="panelHead"><h2>Failed Cases</h2><span>{failed.length} failing</span></div>
           <div className="tableWrap">
             <table>
-              <thead><tr><th /><th>Case</th><th>Failure</th><th>Answer</th><th>Tool</th><th>Latency</th></tr></thead>
+              <thead><tr><th /><th>Case</th><th>Failure</th><th>Answer</th><th>Decision</th><th>Latency</th></tr></thead>
               <tbody>
                 {failed.length ? failed.map((result) => <ResultRow key={result.id} result={result} />) : (
                   <tr><td colSpan={6} className="emptyCell">Run the suite to inspect failures.</td></tr>
