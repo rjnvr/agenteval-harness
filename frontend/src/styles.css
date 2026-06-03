@@ -829,3 +829,627 @@ label {
     flex: 1 1 150px;
   }
 }
+
+/* ---- Shared site nav ---- */
+.siteNav {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin: 0 auto 24px;
+  max-width: 1440px;
+}
+
+.siteBrand {
+  align-items: center;
+  color: #16201c;
+  display: inline-flex;
+  font-weight: 760;
+  gap: 9px;
+  text-decoration: none;
+}
+
+.siteBrandMark {
+  align-items: center;
+  background: #e8f2ee;
+  border-radius: 8px;
+  color: #1f6f5b;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.siteNavLinks {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+}
+
+.siteNavLinks a {
+  border-radius: 8px;
+  color: #53625c;
+  font-weight: 640;
+  padding: 8px 12px;
+  text-decoration: none;
+}
+
+.siteNavLinks a.active {
+  background: #e8f2ee;
+  color: #16201c;
+}
+
+.siteNavCta,
+.siteNavLinks a.siteNavCta {
+  background: #1f6f5b;
+  color: #ffffff;
+  font-weight: 720;
+}
+
+/* ---- Buttons as links ---- */
+a.primary,
+a.secondary,
+a.ctaSecondary {
+  text-decoration: none;
+}
+
+a.secondary {
+  color: #16201c;
+}
+
+/* ---- Landing page ---- */
+.marketing,
+.metricsDoc {
+  margin: 0 auto;
+  max-width: 1440px;
+  padding: 28px;
+}
+
+.hero {
+  align-items: center;
+  display: grid;
+  gap: 40px;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  margin-bottom: 64px;
+  padding: 24px 0 8px;
+}
+
+.heroCopy h1 {
+  font-size: clamp(34px, 4.4vw, 56px);
+  line-height: 1.05;
+  margin: 12px 0 18px;
+}
+
+.heroCopy p {
+  color: #4c5b55;
+  font-size: 18px;
+  line-height: 1.5;
+  max-width: 38ch;
+}
+
+.heroActions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 26px 0 14px;
+}
+
+.heroActions .primary,
+.heroActions .secondary {
+  font-size: 15px;
+  min-height: 46px;
+  padding: 0 18px;
+}
+
+.heroNote {
+  color: #74837d !important;
+  font-size: 14px !important;
+}
+
+.heroVisual img {
+  border: 1px solid #dfe6e1;
+  border-radius: 12px;
+  box-shadow: 0 26px 60px rgba(30, 45, 38, 0.16);
+  display: block;
+  width: 100%;
+}
+
+.marketingSection {
+  margin-bottom: 64px;
+}
+
+.sectionHead {
+  margin: 0 auto 28px;
+  max-width: 60ch;
+  text-align: center;
+}
+
+.sectionHead h2 {
+  font-size: clamp(24px, 3vw, 34px);
+  margin: 6px 0 10px;
+}
+
+.sectionHead p {
+  color: #5d6b66;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.valueGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.valueCard {
+  background: #ffffff;
+  border: 1px solid #dfe6e1;
+  border-radius: 10px;
+  box-shadow: 0 14px 32px rgba(30, 45, 38, 0.07);
+  padding: 20px;
+}
+
+.valueIcon,
+.axisIcon {
+  align-items: center;
+  background: #e8f2ee;
+  border-radius: 8px;
+  color: #1f6f5b;
+  display: inline-flex;
+  height: 40px;
+  justify-content: center;
+  margin-bottom: 12px;
+  width: 40px;
+}
+
+.valueCard h3,
+.axisCard h3,
+.stepCard h3 {
+  font-size: 17px;
+  margin: 0 0 8px;
+}
+
+.valueCard p,
+.axisCard p,
+.stepCard p {
+  color: #5d6b66;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.axisGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.axisCard {
+  background: #ffffff;
+  border: 1px solid #dfe6e1;
+  border-radius: 10px;
+  box-shadow: 0 14px 32px rgba(30, 45, 38, 0.07);
+  color: inherit;
+  display: block;
+  padding: 22px;
+  text-decoration: none;
+  transition: border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+}
+
+.axisCard:hover {
+  border-color: #1f6f5b;
+  box-shadow: 0 18px 40px rgba(30, 45, 38, 0.12);
+  transform: translateY(-2px);
+}
+
+.axisLink {
+  align-items: center;
+  color: #1f6f5b;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 700;
+  gap: 5px;
+  margin-top: 14px;
+}
+
+.stepGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 32px;
+}
+
+.stepCard {
+  background: #ffffff;
+  border: 1px solid #dfe6e1;
+  border-radius: 10px;
+  padding: 22px;
+}
+
+.stepNumber {
+  align-items: center;
+  background: #20392f;
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-flex;
+  font-weight: 760;
+  height: 32px;
+  justify-content: center;
+  margin-bottom: 12px;
+  width: 32px;
+}
+
+.detailVisual img {
+  border: 1px solid #dfe6e1;
+  border-radius: 12px;
+  box-shadow: 0 22px 50px rgba(30, 45, 38, 0.14);
+  display: block;
+  width: 100%;
+}
+
+.ctaBand {
+  align-items: center;
+  background: #20392f;
+  border-radius: 14px;
+  color: #ffffff;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: space-between;
+  margin-bottom: 48px;
+  padding: 32px;
+}
+
+.ctaBand h2 {
+  font-size: clamp(22px, 2.6vw, 30px);
+}
+
+.ctaBand p {
+  color: rgba(255, 255, 255, 0.78);
+  margin-top: 8px;
+}
+
+.ctaActions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ctaSecondary {
+  align-items: center;
+  color: #ffffff;
+  display: inline-flex;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.marketingFooter {
+  align-items: center;
+  border-top: 1px solid #e0e7e2;
+  display: flex;
+  justify-content: space-between;
+  padding: 24px 0 8px;
+}
+
+.marketingFooterLinks {
+  display: flex;
+  gap: 18px;
+}
+
+.marketingFooterLinks a {
+  color: #5d6b66;
+  text-decoration: none;
+}
+
+/* ---- Metrics doc page ---- */
+.docHero {
+  margin: 0 auto 44px;
+  max-width: 70ch;
+}
+
+.docHero h1 {
+  font-size: clamp(32px, 4vw, 48px);
+  margin: 10px 0 16px;
+}
+
+.docHero p {
+  color: #4c5b55;
+  font-size: 18px;
+  line-height: 1.55;
+}
+
+.docSection {
+  margin: 0 auto 52px;
+  max-width: 920px;
+}
+
+.docSection h2 {
+  font-size: clamp(22px, 2.6vw, 28px);
+  margin-bottom: 14px;
+}
+
+.docLede {
+  color: #5d6b66;
+  font-size: 16px;
+  line-height: 1.55;
+  margin: 0 0 20px;
+  max-width: 70ch;
+}
+
+.glossary {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.glossaryRow {
+  border-bottom: 1px solid #e7ece8;
+  display: grid;
+  gap: 6px 24px;
+  grid-template-columns: 220px minmax(0, 1fr);
+  padding: 16px 0;
+}
+
+.glossaryRow dt {
+  color: #16201c;
+  font-weight: 740;
+}
+
+.glossaryRow dd {
+  color: #5d6b66;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.failureGlossary .glossaryRow {
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.glossaryRow code {
+  background: #eef3f0;
+  border-radius: 5px;
+  color: #20392f;
+  font-size: 13px;
+  padding: 2px 6px;
+}
+
+.axisDocList {
+  display: grid;
+  gap: 16px;
+}
+
+.axisDoc {
+  background: #ffffff;
+  border: 1px solid #dfe6e1;
+  border-radius: 10px;
+  box-shadow: 0 14px 32px rgba(30, 45, 38, 0.07);
+  padding: 22px;
+  scroll-margin-top: 24px;
+}
+
+.axisDocHead {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.axisDocHead h3 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.axisDocHead .axisIcon {
+  margin-bottom: 0;
+}
+
+.backingField {
+  background: #eef3f0;
+  border-radius: 5px;
+  color: #20392f;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  padding: 2px 6px;
+}
+
+.axisRange {
+  background: #e8f2ee;
+  border-radius: 999px;
+  color: #1f6f5b;
+  font-size: 12px;
+  font-weight: 720;
+  margin-left: auto;
+  padding: 4px 10px;
+}
+
+.axisDoc p {
+  color: #4c5b55;
+  line-height: 1.55;
+  margin: 0 0 8px;
+}
+
+.axisExample {
+  background: #f7faf8;
+  border: 1px solid #dfe8e3;
+  border-radius: 8px;
+  color: #41504a !important;
+  font-size: 14px;
+  margin: 8px 0 0 !important;
+  padding: 10px 12px;
+}
+
+.chainList {
+  color: #41504a;
+  line-height: 1.6;
+  margin: 0 0 20px;
+  padding-left: 22px;
+}
+
+.chainList li {
+  margin-bottom: 8px;
+}
+
+/* ---- Dashboard onboarding banner ---- */
+.onboardBanner {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #cfe2da;
+  border-left: 4px solid #1f6f5b;
+  border-radius: 10px;
+  box-shadow: 0 14px 32px rgba(30, 45, 38, 0.07);
+  display: flex;
+  gap: 16px;
+  margin: 0 auto 16px;
+  max-width: 1440px;
+  padding: 18px;
+}
+
+.onboardBannerIcon {
+  align-items: center;
+  background: #e8f2ee;
+  border-radius: 8px;
+  color: #1f6f5b;
+  display: flex;
+  flex-shrink: 0;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.onboardBannerBody {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.onboardBannerBody b {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.onboardBannerBody p {
+  color: #5d6b66;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.onboardBannerActions {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.onboardBannerLink {
+  align-items: center;
+  color: #1f6f5b;
+  display: inline-flex;
+  font-weight: 700;
+  gap: 5px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* ---- Metric card info tooltip ---- */
+.metric p {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+}
+
+.metricInfo {
+  align-items: center;
+  color: #9aa8a2;
+  cursor: help;
+  display: inline-flex;
+  position: relative;
+}
+
+.metricPopup {
+  background: #17231f;
+  border: 1px solid #30433c;
+  border-radius: 8px;
+  box-shadow: 0 16px 34px rgba(17, 28, 24, 0.26);
+  color: #ffffff;
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  left: 0;
+  line-height: 1.45;
+  opacity: 0;
+  padding: 11px;
+  pointer-events: none;
+  position: absolute;
+  text-transform: none;
+  top: calc(100% + 9px);
+  transition: opacity 120ms ease;
+  width: 240px;
+  z-index: 10;
+}
+
+.metricInfo:hover .metricPopup,
+.metricInfo:focus-visible .metricPopup {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.metricPopupLink {
+  color: #8fd6c1;
+  display: inline-block;
+  font-weight: 700;
+  margin-top: 8px;
+  text-decoration: none;
+}
+
+.signalLabel {
+  color: #5d6b66;
+  font-size: 12px;
+  font-weight: 720;
+  text-decoration: none;
+}
+
+.signalLabel:hover {
+  color: #1f6f5b;
+  text-decoration: underline;
+}
+
+@media (max-width: 980px) {
+  .hero {
+    grid-template-columns: 1fr;
+    margin-bottom: 44px;
+  }
+
+  .heroCopy p {
+    max-width: none;
+  }
+
+  .valueGrid,
+  .axisGrid,
+  .stepGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .onboardBanner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .marketing,
+  .metricsDoc {
+    padding: 18px;
+  }
+
+  .valueGrid,
+  .axisGrid,
+  .stepGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .glossaryRow {
+    grid-template-columns: 1fr;
+  }
+}

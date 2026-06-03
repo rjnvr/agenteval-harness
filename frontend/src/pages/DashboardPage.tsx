@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Clock3, Fingerprint, Info, KeyRound, Link as LinkIcon, Play, RefreshCw, Scale, Sparkles, Target, WalletCards } from "lucide-react";
-import { api, DEFAULT_MODELS } from "./api";
-import { ComparisonPanel } from "./components/ComparisonPanel";
-import { FailureBreakdown } from "./components/FailureBreakdown";
-import { MetricCard } from "./components/MetricCard";
-import { QualitySignal } from "./components/QualitySignal";
-import { ResultRow } from "./components/ResultRow";
-import type { Comparison, ComparisonRun, EvalRun, EvalSummary, Provider, RunDetail, Summary } from "./types";
-import { money, pct, providerLabel } from "./utils";
+import { Link } from "react-router-dom";
+import { AlertTriangle, ArrowRight, CheckCircle2, Clock3, Fingerprint, Info, KeyRound, Link as LinkIcon, Play, RefreshCw, Scale, Sparkles, Target, WalletCards } from "lucide-react";
+import { api, DEFAULT_MODELS } from "../api";
+import { ComparisonPanel } from "../components/ComparisonPanel";
+import { FailureBreakdown } from "../components/FailureBreakdown";
+import { MetricCard } from "../components/MetricCard";
+import { QualitySignal } from "../components/QualitySignal";
+import { ResultRow } from "../components/ResultRow";
+import { SiteNav } from "../components/SiteNav";
+import type { Comparison, ComparisonRun, EvalRun, EvalSummary, Provider, RunDetail, Summary } from "../types";
+import { money, pct, providerLabel } from "../utils";
 
 function parseWebhookHeaders(raw: string): Record<string, string> | undefined {
   const trimmed = raw.trim();
@@ -35,7 +37,7 @@ function parseWebhookHeaders(raw: string): Record<string, string> | undefined {
   return undefined;
 }
 
-export function App() {
+export function DashboardPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [runs, setRuns] = useState<EvalRun[]>([]);
   const [comparison, setComparison] = useState<ComparisonRun[]>([]);
@@ -123,6 +125,7 @@ export function App() {
   useEffect(() => { refresh().catch((err) => setError(err instanceof Error ? err.message : "Unable to load dashboard")); }, [refresh]);
 
   const failed = selectedRun?.results.filter((result) => !result.passed) ?? summary?.failed_cases ?? [];
+  const hasRuns = runs.length > 0 || Boolean(summary?.latest_run);
   const latestLabel = useMemo(() => {
     if (!summary?.latest_run) return "No runs yet";
     return `Run ${summary.latest_run.id} - ${providerLabel(summary.latest_run.provider)} - ${new Date(summary.latest_run.created_at).toLocaleString()}`;
@@ -130,6 +133,7 @@ export function App() {
 
   return (
     <main>
+      <SiteNav active="dashboard" />
       <header className="topbar">
         <div>
           <h1>AgentEval Harness</h1>
@@ -197,13 +201,27 @@ export function App() {
       {error && <div className="error"><AlertTriangle size={16} />{error}</div>}
       {runProgress && <div className="runProgress"><RefreshCw size={16} />{runProgress}</div>}
 
+      {!hasRuns && !loading && (
+        <div className="onboardBanner">
+          <div className="onboardBannerIcon"><Sparkles size={20} /></div>
+          <div className="onboardBannerBody">
+            <b>New here? Run your first evaluation in one click.</b>
+            <p>The <strong>Mock</strong> provider is already selected — it&apos;s a competent local agent that needs no API key. Just press <strong>Run evals</strong> to see how the dashboard scores 20 golden scheduling scenarios.</p>
+          </div>
+          <div className="onboardBannerActions">
+            <button className="primary" onClick={runEval} disabled={loading}><Play size={16} />Run Mock evals</button>
+            <Link className="onboardBannerLink" to="/metrics">What the metrics mean <ArrowRight size={14} /></Link>
+          </div>
+        </div>
+      )}
+
       <section className="metricsGrid">
-        <MetricCard label="Tests Run" value={String(summary?.total_tests_run ?? 0)} helper={`${summary?.total_runs ?? 0} total runs`} icon={<Target size={18} />} />
-        <MetricCard label="Strict Pass Rate" value={pct(summary?.pass_rate ?? 0)} helper={latestLabel} icon={<CheckCircle2 size={18} />} />
-        <MetricCard label="Avg Latency" value={`${Math.round(summary?.avg_latency_ms ?? 0)} ms`} helper="Latest run average" icon={<Clock3 size={18} />} />
-        <MetricCard label="Avg Cost" value={money(summary?.avg_cost_usd ?? 0)} helper="Per case estimate" icon={<WalletCards size={18} />} />
-        <MetricCard label="Judge Kappa" value={(summary?.calibration?.pass_kappa ?? 0).toFixed(2)} helper={`${summary?.calibration?.sample_size ?? 0} labeled traces`} icon={<Scale size={18} />} />
-        <MetricCard label="PII Recall" value={pct(summary?.pii_redaction?.recall ?? 0)} helper={`${summary?.pii_redaction?.redacted_entities ?? 0}/${summary?.pii_redaction?.expected_entities ?? 0} entities`} icon={<Fingerprint size={18} />} />
+        <MetricCard label="Tests Run" value={String(summary?.total_tests_run ?? 0)} helper={`${summary?.total_runs ?? 0} total runs`} icon={<Target size={18} />} info="How many individual cases have been evaluated across all runs." />
+        <MetricCard label="Strict Pass Rate" value={pct(summary?.pass_rate ?? 0)} helper={latestLabel} icon={<CheckCircle2 size={18} />} info="Share of cases that passed every quality gate. A case only passes if all checks pass." infoHref="/metrics#strict-pass-rate" />
+        <MetricCard label="Avg Latency" value={`${Math.round(summary?.avg_latency_ms ?? 0)} ms`} helper="Latest run average" icon={<Clock3 size={18} />} info="Average time the agent took to answer one case, in milliseconds." infoHref="/metrics#latency-cost" />
+        <MetricCard label="Avg Cost" value={money(summary?.avg_cost_usd ?? 0)} helper="Per case estimate" icon={<WalletCards size={18} />} info="Estimated provider cost per case, from token usage where available." infoHref="/metrics#latency-cost" />
+        <MetricCard label="Judge Kappa" value={(summary?.calibration?.pass_kappa ?? 0).toFixed(2)} helper={`${summary?.calibration?.sample_size ?? 0} labeled traces`} icon={<Scale size={18} />} info="How closely the automatic evaluator agrees with human labels (Cohen's kappa). 1.0 is perfect agreement." infoHref="/metrics#judge" />
+        <MetricCard label="PII Recall" value={pct(summary?.pii_redaction?.recall ?? 0)} helper={`${summary?.pii_redaction?.redacted_entities ?? 0}/${summary?.pii_redaction?.expected_entities ?? 0} entities`} icon={<Fingerprint size={18} />} info="Share of sensitive entities that were correctly redacted from agent output." infoHref="/metrics#pii-recall" />
       </section>
 
       <section className="qualityPanel">
@@ -212,11 +230,11 @@ export function App() {
           <h2>Latest run quality signals</h2>
         </div>
         <div className="qualityGrid">
-          <QualitySignal label="Decision correctness" value={summary?.score_breakdown?.decision_correctness ?? 0} helper="Right scheduling action" />
-          <QualitySignal label="Constraint satisfaction" value={summary?.score_breakdown?.constraint_satisfaction ?? 0} helper="Calendars and working hours" />
-          <QualitySignal label="Preference adherence" value={summary?.score_breakdown?.preference_adherence ?? 0} helper="Context-sensitive rules" />
-          <QualitySignal label="Timezone accuracy" value={summary?.score_breakdown?.timezone_accuracy ?? 0} helper="Slot conversion correctness" />
-          <QualitySignal label="Coordination coverage" value={summary?.score_breakdown?.coordination_coverage ?? 0} helper="Participants and considerations" />
+          <QualitySignal label="Decision correctness" value={summary?.score_breakdown?.decision_correctness ?? 0} helper="Right scheduling action" href="/metrics#decision-correctness" />
+          <QualitySignal label="Constraint satisfaction" value={summary?.score_breakdown?.constraint_satisfaction ?? 0} helper="Calendars and working hours" href="/metrics#constraint-satisfaction" />
+          <QualitySignal label="Preference adherence" value={summary?.score_breakdown?.preference_adherence ?? 0} helper="Context-sensitive rules" href="/metrics#preference-adherence" />
+          <QualitySignal label="Timezone accuracy" value={summary?.score_breakdown?.timezone_accuracy ?? 0} helper="Slot conversion correctness" href="/metrics#timezone-accuracy" />
+          <QualitySignal label="Coordination coverage" value={summary?.score_breakdown?.coordination_coverage ?? 0} helper="Participants and considerations" href="/metrics#coordination-coverage" />
         </div>
       </section>
 
@@ -251,7 +269,7 @@ export function App() {
               <thead><tr><th /><th>Case</th><th>Failure</th><th>Answer</th><th>Decision</th><th>Latency</th></tr></thead>
               <tbody>
                 {failed.length ? failed.map((result) => <ResultRow key={result.id} result={result} />) : (
-                  <tr><td colSpan={6} className="emptyCell">Run the suite to inspect failures.</td></tr>
+                  <tr><td colSpan={6} className="emptyCell">No failing cases yet. Press <strong>Run evals</strong> above to populate the suite, then expand a row here to inspect why a case failed.</td></tr>
                 )}
               </tbody>
             </table>
@@ -269,7 +287,7 @@ export function App() {
                   <span>{providerLabel(run.provider)} - {run.model} - {pct(run.pass_rate)} - {run.total_cases} cases</span>
                 </button>
               ))}
-              {!runs.length && <div className="emptyBand">No eval runs yet.</div>}
+              {!runs.length && <div className="emptyBand">No eval runs yet. Your runs will appear here once you press <strong>Run evals</strong>.</div>}
             </div>
           </div>
         </aside>
