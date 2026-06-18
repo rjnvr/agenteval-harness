@@ -28,6 +28,7 @@ class EvalCase(Base):
     acceptable_actions_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     context_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
     expected_decision_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    domain: Mapped[str] = mapped_column(String, default="scheduling", server_default="scheduling", nullable=False)
 
     document: Mapped[Document] = relationship(back_populates="cases")
 
@@ -39,6 +40,7 @@ class EvalRun(Base):
     mode: Mapped[str] = mapped_column(String, nullable=False)
     provider: Mapped[str] = mapped_column(String, default="mock", nullable=False)
     model: Mapped[str] = mapped_column(String, default="mock-deterministic", nullable=False)
+    domain: Mapped[str] = mapped_column(String, default="scheduling", server_default="scheduling", nullable=False)
     judge_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     status: Mapped[str] = mapped_column(String, default="completed", nullable=False)
     total_cases: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -73,6 +75,10 @@ class EvalResult(Base):
     preference_score: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
     timezone_correct: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     proposed_slot: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    context_precision: Mapped[float] = mapped_column(Float, default=0, server_default="0", nullable=False)
+    citation_score: Mapped[float] = mapped_column(Float, default=0, server_default="0", nullable=False)
+    refusal_correct: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1", nullable=False)
+    citations_json: Mapped[str] = mapped_column(Text, default="[]", server_default="[]", nullable=False)
     latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     cost_usd: Mapped[float] = mapped_column(Float, nullable=False)
     failure_type: Mapped[str] = mapped_column(String, nullable=False)

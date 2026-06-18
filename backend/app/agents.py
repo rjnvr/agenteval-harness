@@ -2,10 +2,12 @@ import json
 import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from typing import Any
 
 from backend.app.dataset import context_lines, expected_decision
+from backend.app.domains.documentation import DOC_ACTIONS
 from backend.app.tools import SUPPORTED_ACTIONS
 
 WEBHOOK_TIMEOUT_SECONDS = 30.0
@@ -22,6 +24,7 @@ class AgentOutput:
     cost_usd: float
     schema_valid: bool = True
     proposed_slot: str = ""
+    citations: list[str] = field(default_factory=list)
 
 
 class AgentError(RuntimeError):
@@ -162,7 +165,98 @@ def _agent_prompt(case: Any, chunks: list[str]) -> dict[str, Any]:
     }
 
 
-def run_anthropic_agent(case: Any, document_text: str, model: str, api_key: str | None) -> AgentOutput:
+def _parse_doc_agent_json(raw: str) -> dict[str, Any]:
+    parsed = json.loads(_strip_code_fence(raw))
+    if not {"answer", "action"} <= set(parsed):
+        missing = ", ".join(sorted({"answer", "action"} - set(parsed)))
+        raise AgentError(f"Model response missing required JSON fields: {missing}")
+    action = str(parsed.get("action", "")).strip()
+    if action not in DOC_ACTIONS:
+        raise AgentError(f"Unsupported action returned: {action}")
+    citations_raw = parsed.get("citations", [])
+    citations = [str(item).strip() for item in citations_raw if str(item).strip()] if isinstance(citations_raw, list) else []
+    return {
+        "answer": str(parsed.get("answer", "")).strip(),
+        "action": action,
+        "action_input": str(parsed.get("action_input", "")).strip(),
+        "proposed_slot": "",
+        "citations": citations,
+    }
+
+
+def _doc_agent_prompt(case: Any, chunks: list[str]) -> dict[str, Any]:
+    return {
+        "retrieved_chunks": chunks,
+        "question": case.input,
+        "allowed_actions": sorted(DOC_ACTIONS),
+        "instructions": (
+            "You are a documentation assistant. Answer the question using ONLY the retrieved "
+            "documentation chunks. Cite the source page id(s) you used in a 'citations' array. "
+            "If the answer is not present in the chunks, respond with action 'insufficient_context' "
+            "instead of guessing. Return strict JSON with keys answer, action, action_input, citations."
+        ),
+    }
+
+
+def run_mock_doc_agent(
+    case: Any,
+    retrieved_chunks: list[str],
+    facts: list[str],
+    expected_sources: list[str],
+) -> AgentOutput:
+    """Competent baseline: answers grounded in the facts, cites the right page, refuses honestly."""
+    started = time.perf_counter()
+    if case.expected_action == "insufficient_context":
+        answer = "That topic is not covered in the current documentation, so I cannot answer from the docs."
+        return AgentOutput(
+            answer=answer,
+            action="insufficient_context",
+            action_input="not documented",
+            retrieved_chunks=retrieved_chunks,
+            latency_ms=max(int((time.perf_counter() - started) * 1000), 1),
+            cost_usd=0.0,
+            citations=[],
+        )
+    answer = f"{case.expected_answer} {' '.join(facts)}".strip()
+    return AgentOutput(
+        answer=answer,
+        action=case.expected_action,
+        action_input=", ".join(facts[:2]) if facts else case.expected_answer,
+        retrieved_chunks=retrieved_chunks,
+        latency_ms=max(int((time.perf_counter() - started) * 1000), 1),
+        cost_usd=0.0,
+        citations=list(expected_sources),
+    )
+
+
+def run_naive_doc_agent(case: Any, retrieved_chunks: list[str], facts: list[str]) -> AgentOutput:
+    """Intentionally bad: answers everything confidently, never refuses, never cites, and invents detail."""
+    started = time.perf_counter()
+    answer = (
+        f"Yes, that is fully supported. {case.input} works out of the box via the "
+        "undocumentedoverride configuration flag."
+    )
+    return AgentOutput(
+        answer=answer,
+        action="answer",
+        action_input="confident guess",
+        retrieved_chunks=retrieved_chunks,
+        latency_ms=max(int((time.perf_counter() - started) * 1000), 1),
+        cost_usd=0.0,
+        citations=[],
+    )
+
+
+def run_anthropic_agent(
+    case: Any,
+    document_text: str,
+    model: str,
+    api_key: str | None,
+    *,
+    chunks: list[str] | None = None,
+    prompt_builder: Callable[[Any, list[str]], dict[str, Any]] | None = None,
+    parser: Callable[[str], dict[str, Any]] | None = None,
+) -> AgentOutput:
     try:
         from anthropic import Anthropic
     except ImportError as exc:
@@ -171,18 +265,20 @@ def run_anthropic_agent(case: Any, document_text: str, model: str, api_key: str 
         raise AgentError("Anthropic provider requires an API key from the run request or ANTHROPIC_API_KEY.")
 
     started = time.perf_counter()
-    chunks = context_lines(case)
+    chunks = context_lines(case) if chunks is None else chunks
+    build_prompt = prompt_builder or _agent_prompt
+    parse = parser or _parse_agent_json
     client = Anthropic(api_key=api_key)
     try:
         response = client.messages.create(
             model=model,
             max_tokens=450,
             temperature=0,
-            messages=[{"role": "user", "content": json.dumps(_agent_prompt(case, chunks))}],
+            messages=[{"role": "user", "content": json.dumps(build_prompt(case, chunks))}],
         )
     except Exception as exc:
         raise AgentError(f"Anthropic request failed: {exc}") from exc
-    parsed = _parse_agent_json(_extract_text_from_claude_response(response))
+    parsed = parse(_extract_text_from_claude_response(response))
     usage = getattr(response, "usage", None)
     input_tokens = int(getattr(usage, "input_tokens", 0) or 0)
     output_tokens = int(getattr(usage, "output_tokens", 0) or 0)
@@ -194,6 +290,7 @@ def run_anthropic_agent(case: Any, document_text: str, model: str, api_key: str 
         latency_ms=max(int((time.perf_counter() - started) * 1000), 1),
         cost_usd=estimate_claude_cost(input_tokens, output_tokens),
         proposed_slot=parsed["proposed_slot"],
+        citations=parsed.get("citations", []),
     )
 
 
