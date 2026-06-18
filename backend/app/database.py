@@ -73,6 +73,7 @@ def ensure_schema() -> None:
             "model": "VARCHAR DEFAULT 'mock-deterministic' NOT NULL",
             "judge_enabled": "BOOLEAN DEFAULT false NOT NULL",
             "status": "VARCHAR DEFAULT 'completed' NOT NULL",
+            "domain": "VARCHAR DEFAULT 'scheduling' NOT NULL",
         }
         with engine.begin() as conn:
             for name, ddl in run_columns.items():
@@ -86,6 +87,7 @@ def ensure_schema() -> None:
             "acceptable_actions_json": "TEXT DEFAULT '[]' NOT NULL",
             "context_json": "TEXT DEFAULT '{}' NOT NULL",
             "expected_decision_json": "TEXT DEFAULT '{}' NOT NULL",
+            "domain": "VARCHAR DEFAULT 'scheduling' NOT NULL",
         }
         with engine.begin() as conn:
             for name, ddl in case_columns.items():
@@ -111,6 +113,10 @@ def ensure_schema() -> None:
             "failure_mode": "VARCHAR DEFAULT 'none' NOT NULL",
             "failure_explanation": "TEXT DEFAULT '' NOT NULL",
             "trace_json": "TEXT DEFAULT '{}' NOT NULL",
+            "context_precision": "FLOAT DEFAULT 0 NOT NULL",
+            "citation_score": "FLOAT DEFAULT 0 NOT NULL",
+            "refusal_correct": "BOOLEAN DEFAULT true NOT NULL",
+            "citations_json": "TEXT DEFAULT '[]' NOT NULL",
         }
         with engine.begin() as conn:
             for name, ddl in result_columns.items():
